@@ -922,6 +922,7 @@ export class UISystem {
     this.overlayState.append(this.overlayStateLeft, this.overlayStateRight);
     this.overlay.append(this.overlayMenu, this.overlayState, this.overlayDialog);
     this.overlayMenu.append(menuLeft, menuCenter, menuRight);
+    const mobileOrientationGate = this.createMobileOrientationGate();
     this.syncAudioButtons();
     this.setSelectedRole(this.selectedRole, false);
     this.setMenuPlayMode(this.menuPlayMode, false);
@@ -938,6 +939,7 @@ export class UISystem {
       this.rainOverlay,
       this.vignette,
       this.overlay,
+      mobileOrientationGate,
     );
     host.append(this.root);
     this.driverDialogSound.prime();
@@ -2125,6 +2127,34 @@ export class UISystem {
     valueNode.classList.add('overlay-summary-value');
     row.append(iconNode, labelNode, valueNode);
     return row;
+  }
+
+  private createMobileOrientationGate(): HTMLElement {
+    const gate = document.createElement('div');
+    gate.className = 'mobile-orientation-gate';
+    gate.setAttribute('aria-live', 'polite');
+    gate.setAttribute('role', 'status');
+
+    const iconWrap = document.createElement('div');
+    iconWrap.className = 'mobile-orientation-icon-wrap';
+
+    const phone = document.createElement('div');
+    phone.className = 'mobile-orientation-phone';
+
+    const arrow = document.createElement('div');
+    arrow.className = 'mobile-orientation-arrow';
+    iconWrap.append(phone, arrow);
+
+    const title = document.createElement('div');
+    title.className = 'mobile-orientation-title';
+    title.textContent = 'Rotate to Landscape';
+
+    const body = document.createElement('div');
+    body.className = 'mobile-orientation-copy';
+    body.textContent = 'Joe Must Drive is built for wide controls. Turn your phone sideways to play.';
+
+    gate.append(iconWrap, title, body);
+    return gate;
   }
 
   private getChainTier(reward: RewardState): 'ready' | 'low' | 'mid' | 'high' | 'overdrive' {

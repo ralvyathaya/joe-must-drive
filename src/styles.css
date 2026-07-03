@@ -72,6 +72,182 @@ body {
   font-family: var(--font-ui);
 }
 
+.mobile-orientation-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 28px;
+  pointer-events: auto;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 174, 91, 0.18), transparent 34%),
+    radial-gradient(circle at 50% 72%, rgba(255, 76, 45, 0.08), transparent 44%),
+    linear-gradient(180deg, rgba(5, 7, 9, 0.98), rgba(10, 12, 14, 0.96));
+  backdrop-filter: blur(12px);
+}
+
+.mobile-orientation-gate::before,
+.mobile-orientation-gate::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(255, 188, 108, 0.18);
+  clip-path: polygon(0 0, 22% 0, 22% 2px, 2px 2px, 2px 22%, 0 22%, 0 0, 100% 0, 100% 22%, calc(100% - 2px) 22%, calc(100% - 2px) 2px, 78% 2px, 78% 0, 100% 0, 100% 100%, 78% 100%, 78% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 78%, 100% 78%, 100% 100%, 0 100%, 0 78%, 2px 78%, 2px calc(100% - 2px), 22% calc(100% - 2px), 22% 100%, 0 100%);
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+.mobile-orientation-gate::after {
+  inset: 0;
+  border: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 196, 119, 0.04) 0 1px, transparent 1px 9px),
+    linear-gradient(transparent 0 52%, rgba(255, 129, 67, 0.08) 52% 53%, transparent 53%);
+  clip-path: none;
+  opacity: 0.42;
+}
+
+.mobile-orientation-icon-wrap {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.42));
+}
+
+.mobile-orientation-phone {
+  position: relative;
+  width: 44px;
+  height: 76px;
+  border: 3px solid rgba(255, 236, 204, 0.94);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 198, 119, 0.12), rgba(255, 87, 49, 0.04)),
+    rgba(10, 11, 12, 0.86);
+  box-shadow:
+    inset 0 0 0 3px rgba(0, 0, 0, 0.26),
+    0 0 0 1px rgba(255, 141, 70, 0.3),
+    0 0 28px rgba(255, 130, 62, 0.16);
+  animation: rotate-phone-hint 1.65s ease-in-out infinite;
+}
+
+.mobile-orientation-phone::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 236, 204, 0.76);
+  transform: translate(-7px, 8px);
+}
+
+.mobile-orientation-arrow {
+  position: absolute;
+  inset: 12px;
+  border: 3px solid rgba(255, 166, 84, 0.86);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 999px;
+  animation: rotate-arrow-hint 1.65s ease-in-out infinite;
+}
+
+.mobile-orientation-arrow::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 7px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 14px solid rgba(255, 166, 84, 0.9);
+  transform: rotate(44deg);
+}
+
+.mobile-orientation-title {
+  position: relative;
+  z-index: 1;
+  color: #fff0d5;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 9vw, 3.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  text-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.7),
+    0 0 22px rgba(255, 135, 64, 0.22);
+}
+
+.mobile-orientation-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 320px;
+  color: rgba(255, 231, 196, 0.82);
+  font-family: var(--font-status);
+  font-size: clamp(0.82rem, 3.8vw, 1rem);
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+}
+
+@keyframes rotate-phone-hint {
+  0%,
+  18% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  54%,
+  82% {
+    transform: rotate(90deg) scale(1.04);
+  }
+
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes rotate-arrow-hint {
+  0%,
+  18% {
+    opacity: 0.38;
+    transform: rotate(-38deg) scale(0.92);
+  }
+
+  54%,
+  82% {
+    opacity: 1;
+    transform: rotate(28deg) scale(1);
+  }
+
+  100% {
+    opacity: 0.38;
+    transform: rotate(-38deg) scale(0.92);
+  }
+}
+
+@media (orientation: portrait) and (pointer: coarse),
+  (orientation: portrait) and (hover: none),
+  (orientation: portrait) and (max-width: 640px) {
+  .mobile-orientation-gate {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-orientation-phone,
+  .mobile-orientation-arrow {
+    animation: none;
+  }
+
+  .mobile-orientation-phone {
+    transform: rotate(90deg);
+  }
+}
+
 .mobile-controls {
   position: absolute;
   inset: auto 0 18px;
