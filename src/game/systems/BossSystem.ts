@@ -1076,7 +1076,7 @@ export class BossSystem {
 
   private getWeaponBossDamageMultiplier(weapon: WeaponKind): number {
     if (weapon === 'bazooka') {
-      return 3.4;
+      return 2.6;
     }
     if (weapon === 'shotgun') {
       return 1.65;
