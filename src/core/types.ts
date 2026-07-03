@@ -664,6 +664,7 @@ export interface GameConfig {
     maxDistance: number;
     explosionRadius: number;
     tankDamage: number;
+    bossDamagePerShot: number;
     smokeSpawnInterval: number;
     smokeLifetime: number;
     smokeStartSize: number;
@@ -954,6 +955,8 @@ export interface GameConfig {
     bazookaSpawnChance: number;
     bossBazookaSpawnChance: number;
     bossBazookaSpacingMultiplier: number;
+    bossBazookaIntervalMinSeconds: number;
+    bossBazookaIntervalMaxSeconds: number;
     bazookaPickupSpacingMin: number;
     bazookaPickupSpacingMax: number;
     riflePickupSpacingMin: number;
@@ -1131,6 +1134,7 @@ export interface PickupSnapshot {
   nextSpawnZ: number;
   scriptedRifleSpawned: boolean;
   scriptedBazookaSpawned: boolean;
+  bossBazookaCooldownTimer: number;
   criticalMedkitTimer: number;
   criticalMedkitCooldown: number;
 }

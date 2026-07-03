@@ -401,7 +401,7 @@ export class WeaponSystem {
 
   getBossDamagePerShot(weapon = this.getActiveWeaponKind()): number {
     if (weapon === 'bazooka') {
-      return this.config.bazooka.tankDamage;
+      return this.config.bazooka.bossDamagePerShot;
     }
     if (weapon === 'shotgun') {
       return this.config.shotgun.damagePerPellet * this.config.shotgun.pelletsPerShot * 0.45;
