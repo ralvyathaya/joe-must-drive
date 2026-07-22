@@ -13,6 +13,7 @@ import {
   LineSegments,
   Mesh,
   MeshBasicMaterial,
+  Object3D,
   PCFSoftShadowMap,
   PerspectiveCamera,
   Points,
@@ -20,6 +21,7 @@ import {
   Scene,
   SRGBColorSpace,
   SphereGeometry,
+  Texture,
   Vector3,
   WebGLRenderer,
 } from 'three';
@@ -71,7 +73,7 @@ export class RendererSystem {
   private composer: EffectComposer | null = null;
   private speedPass: SpeedShaderPass | null = null;
   private readonly runtimeProfile = getRuntimePerformanceProfile();
-  private postProcessingLoading = false;
+  private postProcessingPromise: Promise<void> | null = null;
   private destroyed = false;
   private speedEffectTime = 0;
   private speedEffectSpeed = 0;
@@ -133,7 +135,6 @@ export class RendererSystem {
     this.resize = this.resize.bind(this);
     window.addEventListener('resize', this.resize);
     this.resize();
-    this.schedulePostProcessingLoad();
     if (this.runtimeProfile.perfDebug) {
       console.info('[perf] renderer', {
         tier: this.runtimeProfile.qualityTier,
@@ -154,6 +155,39 @@ export class RendererSystem {
     }
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  preloadAll(): Promise<void> {
+    return this.initPostProcessing();
+  }
+
+  async prewarmScene(): Promise<void> {
+    const visibility = new Map<Object3D, boolean>();
+    const textures = new Set<Texture>();
+    this.scene.traverse((object) => {
+      visibility.set(object, object.visible);
+      object.visible = true;
+      const material = (object as Object3D & { material?: object | object[] }).material;
+      for (const entry of Array.isArray(material) ? material : material ? [material] : []) {
+        for (const value of Object.values(entry)) {
+          if (value instanceof Texture) {
+            textures.add(value);
+          }
+        }
+      }
+    });
+
+    try {
+      for (const texture of textures) {
+        this.renderer.initTexture(texture);
+      }
+      await this.renderer.compileAsync(this.scene, this.camera);
+      this.composer?.render();
+    } finally {
+      for (const [object, visible] of visibility) {
+        object.visible = visible;
+      }
+    }
   }
 
   destroy(): void {
@@ -436,35 +470,21 @@ export class RendererSystem {
     );
   }
 
-  private schedulePostProcessingLoad(): void {
-    if (!this.runtimeProfile.enablePostProcessing) {
-      return;
-    }
-
-    const load = () => {
-      void this.initPostProcessing();
-    };
-
-    if (typeof window === 'undefined') {
-      load();
-      return;
-    }
-
-    window.setTimeout(load, this.runtimeProfile.qualityTier === 'medium' ? 900 : 450);
-  }
-
-  private async initPostProcessing(): Promise<void> {
+  private initPostProcessing(): Promise<void> {
     if (
       this.destroyed ||
-      this.postProcessingLoading ||
       this.composer ||
       !this.runtimeProfile.enablePostProcessing
     ) {
-      return;
+      return Promise.resolve();
     }
 
-    this.postProcessingLoading = true;
-    try {
+    if (this.postProcessingPromise) {
+      return this.postProcessingPromise;
+    }
+
+    this.postProcessingPromise = (async () => {
+      try {
       const [{ EffectComposer }, { OutputPass }, { RenderPass }, { SpeedShaderPass }] =
         await Promise.all([
           import('three/examples/jsm/postprocessing/EffectComposer.js'),
@@ -506,11 +526,11 @@ export class RendererSystem {
           tier: this.runtimeProfile.qualityTier,
         });
       }
-    } catch (error) {
-      console.warn('[RendererSystem] Failed to initialize post-processing; using direct render.', error);
-    } finally {
-      this.postProcessingLoading = false;
-    }
+      } catch (error) {
+        console.warn('[RendererSystem] Failed to initialize post-processing; using direct render.', error);
+      }
+    })();
+    return this.postProcessingPromise;
   }
 
   private getScaledRainCount(count: number): number {
