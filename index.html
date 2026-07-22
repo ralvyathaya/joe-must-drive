@@ -14,10 +14,34 @@
       href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Quantico:ital,wght@0,400;0,700;1,400;1,700&family=Special+Elite&display=swap"
       rel="stylesheet"
     />
+    <style>
+      #boot-loader{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:radial-gradient(circle at 50% 34%,#25201a 0,#0b0d0f 42%,#050607 100%);color:#fff0d5;font-family:Impact,sans-serif;transition:opacity .24s ease}
+      #boot-loader[data-hidden="true"]{opacity:0;pointer-events:none}
+      .boot-loader-card{width:min(430px,82vw);text-align:center}
+      .boot-loader-logo{display:block;width:min(330px,72vw);max-height:34vh;margin:0 auto 24px;object-fit:contain;filter:drop-shadow(0 14px 24px #000)}
+      .boot-loader-track{height:10px;overflow:hidden;border:1px solid #7f5a31;background:#08090a;box-shadow:inset 0 0 8px #000}
+      .boot-loader-fill{display:block;width:0;height:100%;background:linear-gradient(90deg,#a93c22,#ffb34f);transition:width .18s ease}
+      .boot-loader-meta{display:flex;justify-content:space-between;gap:16px;margin-top:10px;color:#d7b47d;font:700 12px/1.2 monospace;letter-spacing:.12em;text-transform:uppercase}
+      .boot-loader-retry{margin-top:20px;padding:11px 28px;border:1px solid #b66c35;background:#24170e;color:#ffd69b;font:700 14px Impact,sans-serif;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+      .boot-loader-retry[hidden]{display:none}
+    </style>
     <title>Joe Must Drive</title>
   </head>
   <body>
     <div id="app"></div>
+    <div id="boot-loader" role="status" aria-live="polite">
+      <div class="boot-loader-card">
+        <img class="boot-loader-logo" src="/ui/menu/logo-game.png" alt="Joe Must Drive" />
+        <div class="boot-loader-track" aria-hidden="true">
+          <span id="boot-loader-fill" class="boot-loader-fill"></span>
+        </div>
+        <div class="boot-loader-meta">
+          <span id="boot-loader-stage">Starting engine</span>
+          <span id="boot-loader-percent">0%</span>
+        </div>
+        <button id="boot-loader-retry" class="boot-loader-retry" type="button" hidden>Retry</button>
+      </div>
+    </div>
     <script async src="https://vibej.am/2026/widget.js"></script>
     <script type="module" src="/src/main.ts"></script>
   </body>

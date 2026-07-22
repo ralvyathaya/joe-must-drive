@@ -10,6 +10,7 @@
     "start": "node server/relay.mjs",
     "dev": "vite",
     "relay": "node server/relay.mjs",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
