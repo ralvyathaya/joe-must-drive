@@ -147,14 +147,6 @@ export class PlayerSystem {
     }
   }
 
-  applySnapshot(snapshot: PlayerState): void {
-    Object.assign(this.state, snapshot);
-    this.state.ammoReserve = Number.isFinite(snapshot.ammoReserve)
-      ? snapshot.ammoReserve
-      : Number.POSITIVE_INFINITY;
-    this.lastWorldX = snapshot.strafeX;
-  }
-
   getPosition(target = new Vector3()): Vector3 {
     return target.copy(this.worldPosition);
   }

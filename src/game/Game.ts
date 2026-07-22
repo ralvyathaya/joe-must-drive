@@ -965,11 +965,6 @@ export class Game {
     }
 
     const reward = this.rewardSystem.getState();
-    const ride = this.frameRideState ?? this.lastRideState;
-    if (!ride) {
-      return;
-    }
-
     const snapshot: CoopSnapshot = {
       gameState: this.state,
       elapsedSeconds: this.spawnSystem.elapsedSeconds,
