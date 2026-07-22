@@ -107,6 +107,8 @@ export class BazookaWeapon {
   private readonly impactSound: SoundEffectPool;
 
   private loadedScene: Object3D | null = null;
+  private viewmodelLoadPromise: Promise<void> | null = null;
+  private viewmodelLoadTimer: number | null = null;
   private ammo = 0;
   private cooldown = 0;
   private muzzleFlashTimer = 0;
@@ -138,8 +140,8 @@ export class BazookaWeapon {
       poolSize: 3,
       volume: this.config.bazooka.audio.impactVolume,
     });
-    this.launchSound.prime();
-    this.impactSound.prime();
+    this.launchSound.primeDeferred(8000);
+    this.impactSound.primeDeferred(8100);
 
     this.viewmodelRoot.name = 'BazookaViewmodel';
     this.contentRoot.name = 'BazookaContentRoot';
@@ -166,7 +168,7 @@ export class BazookaWeapon {
     this.createExplosionPool();
     this.applyViewmodelPose();
     this.setEquipped(false);
-    void this.loadViewmodel();
+    this.scheduleViewmodelLoad(8000);
   }
 
   reset(): void {
@@ -234,6 +236,7 @@ export class BazookaWeapon {
   setEquipped(equipped: boolean): void {
     this.viewmodelRoot.visible = equipped;
     if (equipped) {
+      this.ensureViewmodelLoaded();
       return;
     }
 
@@ -324,6 +327,7 @@ export class BazookaWeapon {
   }
 
   destroy(): void {
+    this.cancelScheduledViewmodelLoad();
     this.camera.remove(this.viewmodelRoot);
     this.worldEffectsRoot.removeFromParent();
     this.disposeObject(this.loadedScene);
@@ -358,6 +362,43 @@ export class BazookaWeapon {
       this.muzzlePoint.bind(fallback, this.config.fpsViewmodels.gunner_bazooka.muzzleMarkerNames);
       this.updateMuzzleAnchorFromMarker();
     }
+  }
+
+  private ensureViewmodelLoaded(): void {
+    if (this.loadedScene || this.viewmodelLoadPromise) {
+      return;
+    }
+
+    this.cancelScheduledViewmodelLoad();
+    this.viewmodelLoadPromise = this.loadViewmodel().finally(() => {
+      this.viewmodelLoadPromise = null;
+    });
+  }
+
+  private scheduleViewmodelLoad(delayMs: number): void {
+    if (this.loadedScene || this.viewmodelLoadPromise || this.viewmodelLoadTimer !== null) {
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      this.ensureViewmodelLoaded();
+      return;
+    }
+
+    this.viewmodelLoadTimer = window.setTimeout(() => {
+      this.viewmodelLoadTimer = null;
+      this.ensureViewmodelLoaded();
+    }, Math.max(0, delayMs));
+  }
+
+  private cancelScheduledViewmodelLoad(): void {
+    if (this.viewmodelLoadTimer === null || typeof window === 'undefined') {
+      this.viewmodelLoadTimer = null;
+      return;
+    }
+
+    window.clearTimeout(this.viewmodelLoadTimer);
+    this.viewmodelLoadTimer = null;
   }
 
   private prepareModel(root: Object3D): void {

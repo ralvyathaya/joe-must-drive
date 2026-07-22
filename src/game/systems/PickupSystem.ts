@@ -232,6 +232,17 @@ export class PickupSystem {
         this.scriptedRifleSpawned = true;
       }
     }
+    if (
+      this.canSpawnBossBazooka(loadout, bazookaUnlocked, bossActive) &&
+      this.bossBazookaCooldownTimer <= 0
+    ) {
+      const slot = this.pickups.find((entry) => !entry.active);
+      if (slot) {
+        this.spawn(slot, loadout, player, bazookaUnlocked, elapsedSeconds, 'bazooka', {
+          bossActive,
+        });
+      }
+    }
     const desiredWeaponCount =
       weaponUnlocked
         ? (bazookaUnlocked ? 3 : loadout.shotgunUnlocked ? 2 : 1) +
@@ -370,7 +381,8 @@ export class PickupSystem {
     this.nextSpawnZ = snapshot.nextSpawnZ;
     this.scriptedRifleSpawned = snapshot.scriptedRifleSpawned;
     this.scriptedBazookaSpawned = snapshot.scriptedBazookaSpawned;
-    this.bossBazookaCooldownTimer = snapshot.bossBazookaCooldownTimer;
+    this.bossBazookaCooldownTimer =
+      snapshot.bossBazookaCooldownTimer ?? this.bossBazookaCooldownTimer;
     this.criticalMedkitTimer = snapshot.criticalMedkitTimer;
     this.criticalMedkitCooldown = snapshot.criticalMedkitCooldown;
   }
@@ -557,6 +569,7 @@ export class PickupSystem {
         (bazookaUnlocked &&
           elapsedSeconds >= this.config.pickups.bazookaUnlockTimeSeconds &&
           loadout.bazookaAmmo <= 0 &&
+          !this.hasActiveKind('bazooka') &&
           Math.random() < this.config.pickups.bazookaSpawnChance * 1.2)
       ) {
         kind = 'bazooka';

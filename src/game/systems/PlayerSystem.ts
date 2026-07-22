@@ -115,6 +115,15 @@ export class PlayerSystem {
     this.applyCameraTransform(0, null);
   }
 
+  applySnapshot(snapshot: PlayerState): void {
+    Object.assign(this.state, snapshot);
+    this.state.ammoReserve = Number.isFinite(snapshot.ammoReserve)
+      ? snapshot.ammoReserve
+      : Number.POSITIVE_INFINITY;
+    this.lastWorldX = snapshot.strafeX;
+    this.applyCameraTransform(0, null);
+  }
+
   applyRecoil(amount: number): void {
     this.recoilPitch = clamp(this.recoilPitch - amount, -0.42, 0);
   }

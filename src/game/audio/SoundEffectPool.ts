@@ -46,6 +46,17 @@ export class SoundEffectPool {
     void this.loadBuffer(context);
   }
 
+  primeDeferred(delayMs: number): void {
+    if (typeof window === 'undefined') {
+      this.prime();
+      return;
+    }
+
+    window.setTimeout(() => {
+      this.prime();
+    }, Math.max(0, delayMs));
+  }
+
   play(
     volume = this.defaultVolume,
     playbackRate = this.defaultPlaybackRate,

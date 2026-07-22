@@ -1190,7 +1190,6 @@ export interface RemotePresentationState {
 export interface CoopSnapshot {
   gameState: GameStateType;
   elapsedSeconds: number;
-  deathCause: DeathCauseKey;
   player: PlayerState;
   reward: RewardState;
   ride: RideState;

@@ -464,6 +464,9 @@ export class VehicleRigSystem {
   }
 
   setActiveRole(role: GameplayRole): void {
+    if (this.activeRole !== role) {
+      this.clearWorldFireEffects();
+    }
     this.activeRole = role;
     this.seatPivot.position.copy(this.getActiveSeatPivotPosition());
     this.cameraYaw.position.copy(this.getActiveCameraOffset());
@@ -604,6 +607,7 @@ export class VehicleRigSystem {
     (this.headlightSideSpillRight.material as MeshBasicMaterial).opacity = 0;
     (this.headlightGlow.material as SpriteMaterial).opacity = 0.05;
     this.setWheelBlurOpacity(0);
+    this.clearWorldFireEffects();
     this.updatePosePulses(0);
     this.applyPovVisibility();
     this.vehicleRig.visible = true;
@@ -1347,6 +1351,27 @@ export class VehicleRigSystem {
       tracer.active = false;
       tracer.group.visible = false;
       tracer.material.opacity = 0;
+    }
+  }
+
+  private clearWorldFireEffects(): void {
+    for (const role of ['driver', 'gunner'] as const) {
+      this.poseTimers[role] = 0;
+      this.muzzleTimers[role] = 0;
+      this.lastFirePulse[role] = 0;
+
+      const flash = this.worldFireFlashes[role];
+      flash.group.visible = false;
+      flash.material.opacity = 0;
+      flash.light.intensity = 0;
+
+      for (const tracer of this.worldFireTracers[role]) {
+        tracer.active = false;
+        tracer.life = 0;
+        tracer.maxLife = 0;
+        tracer.group.visible = false;
+        tracer.material.opacity = 0;
+      }
     }
   }
 

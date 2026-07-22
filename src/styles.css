@@ -72,6 +72,182 @@ body {
   font-family: var(--font-ui);
 }
 
+.mobile-orientation-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 28px;
+  pointer-events: auto;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 174, 91, 0.18), transparent 34%),
+    radial-gradient(circle at 50% 72%, rgba(255, 76, 45, 0.08), transparent 44%),
+    linear-gradient(180deg, rgba(5, 7, 9, 0.98), rgba(10, 12, 14, 0.96));
+  backdrop-filter: blur(12px);
+}
+
+.mobile-orientation-gate::before,
+.mobile-orientation-gate::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(255, 188, 108, 0.18);
+  clip-path: polygon(0 0, 22% 0, 22% 2px, 2px 2px, 2px 22%, 0 22%, 0 0, 100% 0, 100% 22%, calc(100% - 2px) 22%, calc(100% - 2px) 2px, 78% 2px, 78% 0, 100% 0, 100% 100%, 78% 100%, 78% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 78%, 100% 78%, 100% 100%, 0 100%, 0 78%, 2px 78%, 2px calc(100% - 2px), 22% calc(100% - 2px), 22% 100%, 0 100%);
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+.mobile-orientation-gate::after {
+  inset: 0;
+  border: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 196, 119, 0.04) 0 1px, transparent 1px 9px),
+    linear-gradient(transparent 0 52%, rgba(255, 129, 67, 0.08) 52% 53%, transparent 53%);
+  clip-path: none;
+  opacity: 0.42;
+}
+
+.mobile-orientation-icon-wrap {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.42));
+}
+
+.mobile-orientation-phone {
+  position: relative;
+  width: 44px;
+  height: 76px;
+  border: 3px solid rgba(255, 236, 204, 0.94);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 198, 119, 0.12), rgba(255, 87, 49, 0.04)),
+    rgba(10, 11, 12, 0.86);
+  box-shadow:
+    inset 0 0 0 3px rgba(0, 0, 0, 0.26),
+    0 0 0 1px rgba(255, 141, 70, 0.3),
+    0 0 28px rgba(255, 130, 62, 0.16);
+  animation: rotate-phone-hint 1.65s ease-in-out infinite;
+}
+
+.mobile-orientation-phone::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 236, 204, 0.76);
+  transform: translate(-7px, 8px);
+}
+
+.mobile-orientation-arrow {
+  position: absolute;
+  inset: 12px;
+  border: 3px solid rgba(255, 166, 84, 0.86);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 999px;
+  animation: rotate-arrow-hint 1.65s ease-in-out infinite;
+}
+
+.mobile-orientation-arrow::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 7px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 14px solid rgba(255, 166, 84, 0.9);
+  transform: rotate(44deg);
+}
+
+.mobile-orientation-title {
+  position: relative;
+  z-index: 1;
+  color: #fff0d5;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 9vw, 3.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  text-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.7),
+    0 0 22px rgba(255, 135, 64, 0.22);
+}
+
+.mobile-orientation-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 320px;
+  color: rgba(255, 231, 196, 0.82);
+  font-family: var(--font-status);
+  font-size: clamp(0.82rem, 3.8vw, 1rem);
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+}
+
+@keyframes rotate-phone-hint {
+  0%,
+  18% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  54%,
+  82% {
+    transform: rotate(90deg) scale(1.04);
+  }
+
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes rotate-arrow-hint {
+  0%,
+  18% {
+    opacity: 0.38;
+    transform: rotate(-38deg) scale(0.92);
+  }
+
+  54%,
+  82% {
+    opacity: 1;
+    transform: rotate(28deg) scale(1);
+  }
+
+  100% {
+    opacity: 0.38;
+    transform: rotate(-38deg) scale(0.92);
+  }
+}
+
+@media (orientation: portrait) and (pointer: coarse),
+  (orientation: portrait) and (hover: none),
+  (orientation: portrait) and (max-width: 640px) {
+  .mobile-orientation-gate {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-orientation-phone,
+  .mobile-orientation-arrow {
+    animation: none;
+  }
+
+  .mobile-orientation-phone {
+    transform: rotate(90deg);
+  }
+}
+
 .mobile-controls {
   position: absolute;
   inset: auto 0 18px;
@@ -3687,6 +3863,21 @@ body {
     gap: 7px;
   }
 
+  .overlay-menu {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 4px 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .overlay-menu::-webkit-scrollbar {
+    display: none;
+  }
+
   .overlay-menu-panel--left,
   .overlay-menu-card,
   .overlay-state-panel--controls,
@@ -3697,6 +3888,29 @@ body {
     border-radius: 18px;
   }
 
+  .overlay-menu-panel--left {
+    grid-column: 1;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: minmax(96px, 34vw) minmax(0, 1fr);
+    align-items: center;
+    justify-content: stretch;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+  }
+
+  .overlay-menu-center {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: stretch;
+    min-height: 0;
+  }
+
+  .overlay-menu-right {
+    display: none;
+  }
+
   .overlay-menu-panel::after,
   .overlay-menu-card::after,
   .overlay-state-panel::after {
@@ -3705,14 +3919,15 @@ body {
   }
 
   .overlay-menu-logo {
-    width: clamp(110px, min(28vw, 30vh), 190px);
+    width: clamp(96px, min(33vw, 22vh), 150px);
+    grid-column: 1;
   }
 
   .overlay-menu-playmode,
   .overlay-menu-copy,
   .overlay-menu-stats,
   .overlay-menu-options {
-    width: clamp(150px, 29vw, 190px);
+    width: 100%;
   }
 
   .overlay-menu-right,
@@ -3723,11 +3938,15 @@ body {
   }
 
   .overlay-menu-role-panel {
-    max-width: min(300px, 36vw);
+    max-width: min(430px, 100%);
+    justify-content: start;
+    gap: 7px;
   }
 
   .overlay-role-select {
-    height: clamp(160px, 46vh, 270px);
+    height: clamp(230px, 43vh, 340px);
+    width: min(100%, 430px);
+    margin: 0 auto;
   }
 
   .overlay-role-title {
@@ -3736,6 +3955,16 @@ body {
 
   .overlay-role-callout {
     width: min(100%, 170px);
+  }
+
+  .overlay-role-card[data-role="driver"] {
+    left: 4%;
+    width: 58%;
+  }
+
+  .overlay-role-card[data-role="gunner"] {
+    left: 42%;
+    width: 54%;
   }
 
   .overlay-role-hint {
@@ -3800,8 +4029,18 @@ body {
 
   .overlay-menu-copy,
   .overlay-menu-hint,
-  .overlay-state-hint {
+  .overlay-state-hint,
+  .overlay-menu-eyebrow,
+  .overlay-menu-tagline,
+  .overlay-menu-stats,
+  .overlay-menu-options > .overlay-menu-section-label {
     display: none;
+  }
+
+  .overlay-menu-playmodes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .overlay-menu-playmode,
@@ -3815,10 +4054,49 @@ body {
     grid-template-columns: 15px 1fr;
     font-size: clamp(0.64rem, min(2.35vw, 3vh), 0.86rem);
     letter-spacing: 0.035em;
+    padding: 0 8px;
   }
 
   .overlay-menu-room-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(78px, 0.38fr) minmax(132px, 0.62fr);
+    gap: 6px;
+  }
+
+  .overlay-menu-options--coop {
+    width: min(100%, 430px);
+    gap: 5px;
+  }
+
+  .overlay-menu-options--coop .overlay-menu-section-label {
+    display: block;
+    margin-top: 1px;
+  }
+
+  .overlay-menu-coop-status {
+    min-height: 0;
+    padding: 5px 8px;
+    font-size: clamp(0.48rem, 1.8vw, 0.6rem);
+    line-height: 1.16;
+  }
+
+  .overlay-menu-lobby-header,
+  .overlay-menu-lobby-slots {
+    margin-bottom: 4px;
+  }
+
+  .overlay-menu-lobby-slot {
+    padding: 4px 6px;
+  }
+
+  .overlay-menu-room-input,
+  .overlay-menu-toggle.overlay-menu-toggle--coop {
+    min-height: 38px;
+  }
+
+  .overlay-menu-solo-action {
+    width: min(240px, 72vw);
+    min-height: 40px;
+    font-size: clamp(0.68rem, 2.3vw, 0.86rem);
   }
 
   .overlay-state-button--primary {

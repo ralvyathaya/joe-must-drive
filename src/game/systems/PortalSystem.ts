@@ -315,11 +315,10 @@ export class PortalSystem {
       this.config.world.roadCurveAmplitude,
     );
     const withinDepth = Math.abs(portal.z) <= this.config.portal.collisionDepth;
-    const triggerHalfWidth = Math.max(
+    const withinWidth = Math.abs(playerX - (portal.laneLocalX + curveOffset)) <= Math.max(
       this.config.portal.collisionRadius,
       this.config.portal.width * 0.72,
     );
-    const withinWidth = Math.abs(playerX - (portal.laneLocalX + curveOffset)) <= triggerHalfWidth;
     return withinDepth && withinWidth;
   }
 

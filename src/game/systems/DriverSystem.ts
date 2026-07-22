@@ -496,6 +496,31 @@ export class DriverSystem {
     this.recentLaneChangeTimer = snapshot.laneChangeAlpha < 1 ? this.config.driver.laneChangeDuration * 0.2 : 0;
   }
 
+  private commitUserRequestedLane(laneIndex: number): void {
+    this.laneRequestCommittedLaneIndex = laneIndex;
+    this.laneRequestCommitTimer = this.config.driver.laneRequestCommitHoldDuration;
+  }
+
+  private shouldBreakUserLaneCommit(
+    lane: LaneThreatState,
+    failureSeverity: number,
+    hasLatch: boolean,
+  ): boolean {
+    if (hasLatch || failureSeverity >= this.config.driver.criticalFailureVetoSeverity) {
+      return true;
+    }
+
+    const blockerDistance = lane.blockerDistance ?? Number.POSITIVE_INFINITY;
+    const blockerIsImmediate =
+      lane.blocker &&
+      blockerDistance <= Math.max(
+        this.config.driver.brakeHazardDistance,
+        this.config.driver.blockerVetoDistance * 0.9,
+      );
+
+    return blockerIsImmediate || lane.bruteCount > 0 || lane.smallCount >= 4 || lane.brokenLane;
+  }
+
   notifyObstacleCollision(obstacleType: LaneThreatState['blockerType']): void {
     if (!obstacleType || !this.wasTurningRecently() || this.supportCueCooldownTimer > 0) {
       return;
@@ -634,31 +659,6 @@ export class DriverSystem {
     this.startLaneChange(bestLane.laneIndex, this.config.driver.laneChangeDuration);
     this.laneRequestCommitTimer = 0;
     this.laneRequestCommittedLaneIndex = null;
-  }
-
-  private commitUserRequestedLane(laneIndex: number): void {
-    this.laneRequestCommittedLaneIndex = laneIndex;
-    this.laneRequestCommitTimer = this.config.driver.laneRequestCommitHoldDuration;
-  }
-
-  private shouldBreakUserLaneCommit(
-    lane: LaneThreatState,
-    failureSeverity: number,
-    hasLatch: boolean,
-  ): boolean {
-    if (hasLatch || failureSeverity >= this.config.driver.criticalFailureVetoSeverity) {
-      return true;
-    }
-
-    const blockerDistance = lane.blockerDistance ?? Number.POSITIVE_INFINITY;
-    const blockerIsImmediate =
-      lane.blocker &&
-      blockerDistance <= Math.max(
-        this.config.driver.brakeHazardDistance,
-        this.config.driver.blockerVetoDistance * 0.9,
-      );
-
-    return blockerIsImmediate || lane.bruteCount > 0 || lane.smallCount >= 4 || lane.brokenLane;
   }
 
   private getBrakeCandidate(
@@ -905,10 +905,12 @@ export class DriverSystem {
     this.laneFromIndex = this.targetLaneIndex;
     this.laneToIndex = clampedLane;
     this.targetLaneIndex = this.laneToIndex;
-    const nitroMultiplier = this.nitroActive ? this.config.ride.nitroLaneChangeMultiplier : 1;
-    this.laneChangeTimer = duration * nitroMultiplier;
-    this.laneChangeDurationCurrent = this.laneChangeTimer;
-    this.recentLaneChangeTimer = this.laneChangeTimer + 0.22;
+      const nitroMultiplier = this.nitroActive ? this.config.ride.nitroLaneChangeMultiplier : 1;
+      this.laneChangeTimer = duration * nitroMultiplier;
+      this.laneChangeDurationCurrent = this.laneChangeTimer;
+      this.recentLaneChangeTimer = this.laneChangeTimer + 0.22;
+      this.laneRequestCommitTimer = 0;
+      this.laneRequestCommittedLaneIndex = null;
   }
 
   private createPrompt(

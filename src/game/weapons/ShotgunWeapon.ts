@@ -87,6 +87,7 @@ export class ShotgunWeapon {
   private readonly playerPosition = new Vector3();
   private readonly pelletBurstTarget = new Vector3();
   private readonly pelletBurstDirection = new Vector3();
+  private readonly visualPelletIndices = new Set<number>();
   private readonly muzzleFlash = new Group();
   private readonly muzzleFlashCoreMaterial = new MeshBasicMaterial({
     color: 0xffd78f,
@@ -133,6 +134,10 @@ export class ShotgunWeapon {
   private sprayDebug: ShotgunSprayDebugSettings;
 
   private loadedScene: Object3D | null = null;
+  private viewmodelLoadPromise: Promise<void> | null = null;
+  private viewmodelLoadTimer: number | null = null;
+  private timingPreloadTimer: number | null = null;
+  private timingPreloadStarted = false;
   private gunshotTimingProbe: HTMLAudioElement | null = null;
   private delayTimingProbe: HTMLAudioElement | null = null;
   private resolvedGunshotDuration = 0;
@@ -187,8 +192,8 @@ export class ShotgunWeapon {
       poolSize: 3,
       volume: this.config.shotgun.audio.delayVolume,
     });
-    this.gunshotSound.prime();
-    this.delaySound.prime();
+    this.gunshotSound.primeDeferred(1800);
+    this.delaySound.primeDeferred(1900);
     this.resolvedCockingDuration = this.config.shotgun.viewmodel.spinDuration;
 
     this.viewmodelRoot.name = 'ShotgunViewmodel';
@@ -231,10 +236,9 @@ export class ShotgunWeapon {
 
     this.applyViewmodelPose();
     this.setEquipped(false);
-    this.preloadGunshotTiming();
-    this.preloadDelayTiming();
+    this.scheduleTimingPreloads(1800);
     void this.loadMuzzleFlashSprite();
-    void this.loadViewmodel();
+    this.scheduleViewmodelLoad(2000);
   }
 
   reset(): void {
@@ -265,6 +269,8 @@ export class ShotgunWeapon {
     this.viewmodelRoot.visible = equipped;
     this.worldEffectsRoot.visible = equipped;
     if (equipped) {
+      this.ensureViewmodelLoaded();
+      this.startTimingPreloads();
       return;
     }
 
@@ -438,6 +444,8 @@ export class ShotgunWeapon {
   }
 
   destroy(): void {
+    this.cancelScheduledViewmodelLoad();
+    this.cancelScheduledTimingPreloads();
     this.camera.remove(this.viewmodelRoot);
     this.worldEffectsRoot.removeFromParent();
     this.disposeObject(this.loadedScene);
@@ -469,6 +477,43 @@ export class ShotgunWeapon {
       console.warn('Failed to load shotgun GLB, using fallback viewmodel.', error);
       this.mountModel(this.createEmergencyFallbackModel());
     }
+  }
+
+  private ensureViewmodelLoaded(): void {
+    if (this.loadedScene || this.viewmodelLoadPromise) {
+      return;
+    }
+
+    this.cancelScheduledViewmodelLoad();
+    this.viewmodelLoadPromise = this.loadViewmodel().finally(() => {
+      this.viewmodelLoadPromise = null;
+    });
+  }
+
+  private scheduleViewmodelLoad(delayMs: number): void {
+    if (this.loadedScene || this.viewmodelLoadPromise || this.viewmodelLoadTimer !== null) {
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      this.ensureViewmodelLoaded();
+      return;
+    }
+
+    this.viewmodelLoadTimer = window.setTimeout(() => {
+      this.viewmodelLoadTimer = null;
+      this.ensureViewmodelLoaded();
+    }, Math.max(0, delayMs));
+  }
+
+  private cancelScheduledViewmodelLoad(): void {
+    if (this.viewmodelLoadTimer === null || typeof window === 'undefined') {
+      this.viewmodelLoadTimer = null;
+      return;
+    }
+
+    window.clearTimeout(this.viewmodelLoadTimer);
+    this.viewmodelLoadTimer = null;
   }
 
   private mountModel(model: Object3D): void {
@@ -561,95 +606,102 @@ export class ShotgunWeapon {
 
     const rewardEvents: RewardEvent[] = [];
 
-    for (let pelletIndex = 0; pelletIndex < pelletCount; pelletIndex += 1) {
-      this.samplePelletScreenPoint(pelletIndex, pelletCount);
-      this.pelletRaycaster.setFromCamera(this.spreadCrosshair, this.camera);
-      this.pelletDirection.copy(this.pelletRaycaster.ray.direction);
+    enemies.beginRaycastBatch();
+    world.beginRaycastBatch();
+    try {
+      for (let pelletIndex = 0; pelletIndex < pelletCount; pelletIndex += 1) {
+        this.samplePelletScreenPoint(pelletIndex, pelletCount);
+        this.pelletRaycaster.setFromCamera(this.spreadCrosshair, this.camera);
+        this.pelletDirection.copy(this.pelletRaycaster.ray.direction);
 
-      const hitLatched = enemies.raycastLatchedRunner(
-        this.camera,
-        this.spreadCrosshair,
-        this.config.shotgun.range,
-      );
-      const hitZombie = enemies.raycast(this.camera, this.spreadCrosshair, this.config.shotgun.range);
-      const hitBarrel = world.raycast(this.camera, this.spreadCrosshair, this.config.shotgun.range);
-      const enemyHit =
-        hitLatched && (!hitZombie || hitLatched.distance <= hitZombie.distance)
-          ? hitLatched
-          : hitZombie;
-      const hitEnemyFirst =
-        enemyHit &&
-        (!hitBarrel || enemyHit.distance <= hitBarrel.distance);
+        const hitLatched = enemies.raycastLatchedRunner(
+          this.camera,
+          this.spreadCrosshair,
+          this.config.shotgun.range,
+        );
+        const hitZombie = enemies.raycast(this.camera, this.spreadCrosshair, this.config.shotgun.range);
+        const hitBarrel = world.raycast(this.camera, this.spreadCrosshair, this.config.shotgun.range);
+        const enemyHit =
+          hitLatched && (!hitZombie || hitLatched.distance <= hitZombie.distance)
+            ? hitLatched
+            : hitZombie;
+        const hitEnemyFirst =
+          enemyHit &&
+          (!hitBarrel || enemyHit.distance <= hitBarrel.distance);
 
-      if (visualPelletIndices.has(pelletIndex)) {
-        // The burst uses the same sampled screen-space spread as the actual pellet
-        // hit logic, but converts it into a muzzle-originating direction so the
-        // visible blast opens outward as a fan from the barrel.
-        this.pelletBurstTarget
-          .copy(this.pelletRaycaster.ray.origin)
-          .addScaledVector(this.pelletDirection, this.config.shotgun.range);
+        if (visualPelletIndices.has(pelletIndex)) {
+          // The burst uses the same sampled screen-space spread as the actual pellet
+          // hit logic, but converts it into a muzzle-originating direction so the
+          // visible blast opens outward as a fan from the barrel.
+          this.pelletBurstTarget
+            .copy(this.pelletRaycaster.ray.origin)
+            .addScaledVector(this.pelletDirection, this.config.shotgun.range);
+          if (hitEnemyFirst && enemyHit) {
+            this.pelletBurstTarget.copy(enemyHit.point);
+          } else if (hitBarrel) {
+            this.pelletBurstTarget.copy(hitBarrel.point);
+          }
+          const endpointDistance = this.resolvePelletBurstDirection(this.pelletBurstTarget);
+          const visibleLength = clamp(
+            endpointDistance,
+            this.sprayDebug.pelletTraceMinLength,
+            this.sprayDebug.pelletTraceMaxLength,
+          );
+          this.spawnPelletStreak(
+            this.muzzleWorld,
+            this.pelletBurstDirection,
+            visibleLength,
+          );
+        }
+
         if (hitEnemyFirst && enemyHit) {
-          this.pelletBurstTarget.copy(enemyHit.point);
-        } else if (hitBarrel) {
-          this.pelletBurstTarget.copy(hitBarrel.point);
-        }
-        const endpointDistance = this.resolvePelletBurstDirection(this.pelletBurstTarget);
-        const visibleLength = clamp(
-          endpointDistance,
-          this.sprayDebug.pelletTraceMinLength,
-          this.sprayDebug.pelletTraceMaxLength,
-        );
-        this.spawnPelletStreak(
-          this.muzzleWorld,
-          this.pelletBurstDirection,
-          visibleLength,
-        );
-      }
-
-      if (hitEnemyFirst && enemyHit) {
-        const kill = enemies.damage(
-          enemyHit.zombie,
-          hitLatched && enemyHit === hitLatched
-            ? this.config.shotgun.damagePerPellet + this.config.ride.latchShotgunBonusDamage
-            : this.config.shotgun.damagePerPellet,
-          enemyHit.point,
-        );
-        this.hitConfirmTimer = 0.12;
-        this.spawnImpactBurst(enemyHit.point);
-        if (kill) {
-          rewardEvents.push({
-            baseScore: kill.baseScore,
-            weaponType: 'shotgun' as const,
-            zombieType: kill.zombieType,
-            killCount: 1,
-            wasExplosive: false,
-            clearedLatch: Boolean(hitLatched && enemyHit === hitLatched),
-            distanceToPlayer: player.getPosition(this.playerPosition).distanceTo(kill.position),
-          });
-        }
-        continue;
-      }
-
-      if (hitBarrel) {
-        const kills = world.triggerBarrelExplosion(hitBarrel.obstacle, enemies);
-        this.hitConfirmTimer = 0.1;
-        this.spawnImpactBurst(hitBarrel.point);
-        if (kills.length > 0) {
-          const playerPosition = player.getPosition(this.playerPosition);
-          for (const kill of kills) {
+          const kill = enemies.damage(
+            enemyHit.zombie,
+            hitLatched && enemyHit === hitLatched
+              ? this.config.shotgun.damagePerPellet + this.config.ride.latchShotgunBonusDamage
+              : this.config.shotgun.damagePerPellet,
+            enemyHit.point,
+          );
+          this.hitConfirmTimer = 0.12;
+          this.spawnImpactBurst(enemyHit.point);
+          if (kill) {
             rewardEvents.push({
               baseScore: kill.baseScore,
               weaponType: 'shotgun' as const,
               zombieType: kill.zombieType,
-              killCount: kills.length,
-              wasExplosive: true,
-              clearedLatch: false,
-              distanceToPlayer: playerPosition.distanceTo(kill.position),
+              killCount: 1,
+              wasExplosive: false,
+              clearedLatch: Boolean(hitLatched && enemyHit === hitLatched),
+              distanceToPlayer: player.getPosition(this.playerPosition).distanceTo(kill.position),
             });
           }
+          continue;
         }
-        continue;
+
+        if (hitBarrel) {
+          const kills = world.triggerBarrelExplosion(hitBarrel.obstacle, enemies);
+          this.hitConfirmTimer = 0.1;
+          this.spawnImpactBurst(hitBarrel.point);
+          if (kills.length > 0) {
+            const playerPosition = player.getPosition(this.playerPosition);
+            for (const kill of kills) {
+              rewardEvents.push({
+                baseScore: kill.baseScore,
+                weaponType: 'shotgun' as const,
+                zombieType: kill.zombieType,
+                killCount: kills.length,
+                wasExplosive: true,
+                clearedLatch: false,
+                distanceToPlayer: playerPosition.distanceTo(kill.position),
+              });
+            }
+          }
+          continue;
+        }
       }
+    } finally {
+      world.endRaycastBatch();
+      enemies.endRaycastBatch();
     }
 
     if (rewardEvents.length > 0) {
@@ -675,7 +727,8 @@ export class ShotgunWeapon {
   private getRepresentativePelletIndices(): Set<number> {
     const pelletCount = Math.max(1, Math.round(this.sprayDebug.pelletsPerShot));
     const visualCount = Math.round(clamp(this.sprayDebug.pelletVisualCount, 0, pelletCount));
-    const selected = new Set<number>();
+    const selected = this.visualPelletIndices;
+    selected.clear();
     if (visualCount <= 0) {
       return selected;
     }
@@ -754,6 +807,43 @@ export class ShotgunWeapon {
   private updateMuzzleAnchorFromMarker(): void {
     this.muzzlePoint.getWorldPosition(this.muzzleWorld);
     setLocalPositionFromWorld(this.contentRoot, this.muzzleWorld, this.muzzleAnchor);
+  }
+
+  private scheduleTimingPreloads(delayMs: number): void {
+    if (this.timingPreloadStarted || this.timingPreloadTimer !== null) {
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      this.startTimingPreloads();
+      return;
+    }
+
+    this.timingPreloadTimer = window.setTimeout(() => {
+      this.timingPreloadTimer = null;
+      this.startTimingPreloads();
+    }, Math.max(0, delayMs));
+  }
+
+  private startTimingPreloads(): void {
+    if (this.timingPreloadStarted) {
+      return;
+    }
+
+    this.cancelScheduledTimingPreloads();
+    this.timingPreloadStarted = true;
+    this.preloadGunshotTiming();
+    this.preloadDelayTiming();
+  }
+
+  private cancelScheduledTimingPreloads(): void {
+    if (this.timingPreloadTimer === null || typeof window === 'undefined') {
+      this.timingPreloadTimer = null;
+      return;
+    }
+
+    window.clearTimeout(this.timingPreloadTimer);
+    this.timingPreloadTimer = null;
   }
 
   private preloadDelayTiming(): void {

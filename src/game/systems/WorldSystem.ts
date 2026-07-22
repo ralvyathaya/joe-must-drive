@@ -19,6 +19,7 @@ import {
   TextureLoader,
   Vector2,
   Vector3,
+  type Intersection,
 } from 'three';
 import type {
   ActiveObstacle,
@@ -111,6 +112,8 @@ export class WorldSystem {
   private readonly explosions: ExplosionEffect[] = [];
   private readonly breakEffects: BreakEffect[] = [];
   private readonly raycaster = new Raycaster();
+  private readonly raycastBarrelRoots: Object3D[] = [];
+  private readonly raycastHits: Intersection<Object3D>[] = [];
   private readonly explosionCenter = new Vector3();
   private readonly projectileSegment = new Vector3();
   private readonly projectileClosestPoint = new Vector3();
@@ -136,6 +139,8 @@ export class WorldSystem {
   private pendingGateSpawnZ: number | null = null;
   private pendingGateType: ObstacleType | null = null;
   private pendingGateLanes: number[] = [];
+  private raycastBatchDepth = 0;
+  private raycastBarrelRootsPrepared = false;
 
   constructor(
     private readonly scene: Scene,
@@ -291,9 +296,7 @@ export class WorldSystem {
     crosshair: Vector2,
     range: number,
   ): { obstacle: ObstacleRecord; point: Vector3; distance: number } | null {
-    const activeBarrels = this.obstacles
-      .filter((entry) => entry.active && entry.type === 'barrel')
-      .map((entry) => entry.barrelVariant);
+    const activeBarrels = this.getActiveBarrelRaycastRoots();
 
     if (activeBarrels.length === 0) {
       return null;
@@ -303,7 +306,8 @@ export class WorldSystem {
     this.raycaster.near = 0;
     this.raycaster.far = range;
 
-    const hits = this.raycaster.intersectObjects(activeBarrels, true);
+    this.raycastHits.length = 0;
+    const hits = this.raycaster.intersectObjects(activeBarrels, true, this.raycastHits);
     for (const hit of hits) {
       const obstacleId = hit.object.userData.obstacleId as number | undefined;
       if (obstacleId === undefined) {
@@ -323,6 +327,24 @@ export class WorldSystem {
     }
 
     return null;
+  }
+
+  beginRaycastBatch(): void {
+    if (this.raycastBatchDepth === 0) {
+      this.raycastBarrelRootsPrepared = false;
+    }
+    this.raycastBatchDepth += 1;
+  }
+
+  endRaycastBatch(): void {
+    this.raycastBatchDepth = Math.max(0, this.raycastBatchDepth - 1);
+    if (this.raycastBatchDepth > 0) {
+      return;
+    }
+
+    this.raycastBarrelRoots.length = 0;
+    this.raycastHits.length = 0;
+    this.raycastBarrelRootsPrepared = false;
   }
 
   triggerBarrelExplosion(obstacle: ObstacleRecord, enemies: EnemySystem): EnemyKillResult[] {
@@ -644,6 +666,21 @@ export class WorldSystem {
       this.worldRoot.add(chunkGroup);
       this.chunks.push({ group: chunkGroup });
     }
+  }
+
+  private getActiveBarrelRaycastRoots(): Object3D[] {
+    if (this.raycastBatchDepth > 0 && this.raycastBarrelRootsPrepared) {
+      return this.raycastBarrelRoots;
+    }
+
+    this.raycastBarrelRoots.length = 0;
+    for (const obstacle of this.obstacles) {
+      if (obstacle.active && obstacle.type === 'barrel') {
+        this.raycastBarrelRoots.push(obstacle.barrelVariant);
+      }
+    }
+    this.raycastBarrelRootsPrepared = true;
+    return this.raycastBarrelRoots;
   }
 
   private addBackdropSet(parent: Group, side: -1 | 1): void {

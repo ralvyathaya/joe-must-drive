@@ -289,6 +289,9 @@ export class PistolWeapon {
 
   setEquipped(equipped: boolean): void {
     this.equipped = equipped;
+    if (!equipped) {
+      this.clearTransientEffects();
+    }
     this.syncRootVisibility();
   }
 
@@ -716,6 +719,14 @@ export class PistolWeapon {
     for (const tracer of this.tracers) {
       this.deactivateTracer(tracer);
     }
+  }
+
+  private clearTransientEffects(): void {
+    this.muzzleFlashTimer = 0;
+    this.firingTimer = 0;
+    this.muzzleFlash.visible = false;
+    this.muzzleLight.intensity = 0;
+    this.resetTracers();
   }
 
   private deactivateTracer(tracer: TracerEffect): void {

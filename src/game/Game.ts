@@ -343,7 +343,6 @@ export class Game {
       this.playerSystem.applySnapshot(snapshot.player);
       this.driverSystem.applySnapshot(snapshot.ride);
       this.coopStats = { ...snapshot.stats };
-      this.lastDeathCause = snapshot.deathCause;
       this.frameRideState = snapshot.ride;
       this.lastRideState = snapshot.ride;
       this.latchWasActive = snapshot.ride.latchActive;
@@ -352,15 +351,11 @@ export class Game {
         ? Math.max(0, GAME_CONFIG.world.ramp.jumpDuration * (1 - snapshot.ride.jumpRatio))
         : 0;
       this.syncStallLoop(snapshot.ride.engineTroubleMode);
-      this.uiSystem.setDeathCause(this.describeDeathCause(snapshot.deathCause));
       if (snapshot.boss) {
         this.bossSystem.applySnapshot(snapshot.boss);
       }
-
-      if (snapshot.gameState === 'dead') {
-        if (this.state !== 'dead') {
-          this.handleDeath();
-        }
+      if (snapshot.gameState === 'dead' || !snapshot.player.alive) {
+        this.handleDeath();
       } else if (this.state !== snapshot.gameState) {
         this.setState(snapshot.gameState);
       }
@@ -528,14 +523,14 @@ export class Game {
       );
       const playerPosition = this.playerSystem.getPosition(this.playerPosition);
 
-      this.enemySystem.update(
-        simulationDelta,
-        playerPosition,
-        preWorldRide.forwardSpeed,
-        this.spawnSystem.activeEvent,
-        (zombie) => this.handleEnemyContact(zombie),
-        this.jumpTimer > 0,
-      );
+        this.enemySystem.update(
+          simulationDelta,
+          playerPosition,
+          preWorldRide.forwardSpeed,
+          this.spawnSystem.activeEvent,
+          (zombie) => this.handleEnemyContact(zombie),
+          this.jumpTimer > 0,
+        );
       this.updateLatchState(simulationDelta);
 
       const preWeaponStatus = this.weaponSystem.getStatus(this.playerSystem);
@@ -964,6 +959,11 @@ export class Game {
     }
 
     this.networkSnapshotTimer = 0.16;
+    const ride = this.frameRideState ?? this.lastRideState;
+    if (!ride) {
+      return;
+    }
+
     const reward = this.rewardSystem.getState();
     const ride = this.frameRideState ?? this.lastRideState;
     if (!ride) {
@@ -973,7 +973,6 @@ export class Game {
     const snapshot: CoopSnapshot = {
       gameState: this.state,
       elapsedSeconds: this.spawnSystem.elapsedSeconds,
-      deathCause: this.lastDeathCause,
       player: { ...this.playerSystem.state },
       reward: { ...reward },
       ride,
