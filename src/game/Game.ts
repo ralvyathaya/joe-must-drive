@@ -1,4 +1,5 @@
 import { Vector3 } from 'three';
+import { runBootTasks, type BootProgress } from '../core/boot';
 import { GAME_CONFIG } from '../core/config';
 import { GameLoop } from '../core/GameLoop';
 import { RendererSystem } from '../core/Renderer';
@@ -82,6 +83,7 @@ export class Game {
   private readonly musicDirector: MusicDirector;
   private readonly rampJumpSound: SoundEffectPool;
   private readonly gameOverSound: SoundEffectPool;
+  private readonly incomingPortalLaunch = this.isIncomingPortalLaunch();
   private readonly playerPosition = new Vector3();
   private readonly playerForward = new Vector3();
   private readonly handleOverlayKeyDown = (event: KeyboardEvent) => {
@@ -127,6 +129,7 @@ export class Game {
   private decoyTimer = 0;
   private weaponBoostTimer = 0;
   private jumpTimer = 0;
+  private preparePromise: Promise<void> | null = null;
   private armsAnchorDebugTransform: DebugTransformSnapshot = {
     position: [0, 0, 0],
     rotationDegrees: [0, 0, 0],
@@ -381,12 +384,48 @@ export class Game {
     this.applyAudioPreferences();
     window.addEventListener('keydown', this.handleOverlayKeyDown);
 
-    if (this.isIncomingPortalLaunch()) {
-      this.startPortalArrivalRun();
-    } else {
-      this.resetGame();
-      this.setState('menu');
+    this.resetGame();
+    this.setState('menu');
+  }
+
+  prepare(onProgress?: (progress: BootProgress) => void): Promise<void> {
+    if (this.preparePromise) {
+      return this.preparePromise;
     }
+
+    this.musicDirector.prefetchAll();
+    this.preparePromise = runBootTasks(
+      [
+        {
+          stage: 'Preparing renderer and vehicle',
+          run: async () => {
+            await this.rendererSystem.preloadAll();
+            await this.vehicleRigSystem.preloadAll();
+            await this.weaponSystem.preloadInitial();
+            await this.uiSystem.preloadAll();
+          },
+        },
+        {
+          stage: 'Loading road and pickups',
+          run: async () => {
+            await this.worldSystem.preloadAll();
+            await this.pickupSystem.preloadAll();
+            await this.portalSystem.preloadAll();
+          },
+        },
+        { stage: 'Loading the infected', run: () => this.enemySystem.preloadAll() },
+        { stage: 'Preparing weapons', run: () => this.weaponSystem.preloadAll() },
+        { stage: 'Bringing in the boss', run: () => this.bossSystem.preloadAll() },
+        { stage: 'Decoding sound effects', run: () => this.preloadAudio() },
+        { stage: 'Warming up graphics', run: () => this.rendererSystem.prewarmScene() },
+      ],
+      onProgress,
+    ).then(() => {
+      if (this.incomingPortalLaunch) {
+        this.startPortalArrivalRun();
+      }
+    });
+    return this.preparePromise;
   }
 
   start(): void {
@@ -1798,6 +1837,38 @@ export class Game {
 
     this.musicDirector.setTrack(this.resolveMusicTrack());
     this.musicDirector.update(deltaTime);
+  }
+
+  private async preloadAudio(): Promise<void> {
+    await SoundEffectPool.preloadAll([
+      GAME_CONFIG.uiAudio.selectPath,
+      GAME_CONFIG.uiAudio.confirmPath,
+      '/audio/ui/dialog-beep.ogg',
+      GAME_CONFIG.weapon.audio.gunshotPath,
+      GAME_CONFIG.weapon.audio.emptyPath,
+      GAME_CONFIG.weapon.audio.reloadPath,
+      GAME_CONFIG.shotgun.audio.gunshotPath,
+      GAME_CONFIG.shotgun.audio.delayPath,
+      GAME_CONFIG.assaultRifle.audio.gunshotPath,
+      GAME_CONFIG.assaultRifle.audio.reloadPath,
+      GAME_CONFIG.bazooka.audio.launchPath,
+      GAME_CONFIG.bazooka.audio.impactPath,
+      GAME_CONFIG.enemies.audio.normalDeathPath,
+      GAME_CONFIG.enemies.audio.tankDeathPath,
+      GAME_CONFIG.enemies.audio.approachPath,
+      GAME_CONFIG.world.audio.obstacleImpactPath,
+      GAME_CONFIG.world.audio.barrelExplosionPath,
+      GAME_CONFIG.world.ramp.audioPath,
+      GAME_CONFIG.pickups.audio.pickupPath,
+      GAME_CONFIG.rewards.audio.rewardPath,
+      GAME_CONFIG.boss.audio.preStrikePath,
+      GAME_CONFIG.boss.audio.projectileHitPath,
+      GAME_CONFIG.gameOver.audioPath,
+    ]);
+    await this.weaponSystem.preloadAudioTiming();
+    await this.engineLoop.preload();
+    await this.stallLoop.preload();
+    await this.bossSystem.preloadAudio();
   }
 
   private resolveMusicTrack(): MusicTrackKey | null {

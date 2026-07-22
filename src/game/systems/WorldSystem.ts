@@ -129,6 +129,7 @@ export class WorldSystem {
   private concreteBlockLoadPromise: Promise<void> | null = null;
   private carLoadPromise: Promise<void> | null = null;
   private barrelLoadPromise: Promise<void> | null = null;
+  private barrelMarkerTextureLoadPromise: Promise<void> | null = null;
 
   private time = 0;
   private currentSegment: RunSegment = 'rest';
@@ -159,9 +160,6 @@ export class WorldSystem {
     this.createObstaclePool();
     this.createExplosionPool();
     this.createBreakEffectPool();
-    void this.loadBarrelMarkerTexture();
-    void this.loadBarricadeTemplate();
-    void this.loadConcreteBlockTemplate();
     this.reset();
   }
 
@@ -190,6 +188,14 @@ export class WorldSystem {
     for (const obstacle of this.obstacles) {
       this.recycleObstacle(obstacle);
     }
+  }
+
+  async preloadAll(): Promise<void> {
+    await this.loadBarrelMarkerTexture();
+    await this.loadBarricadeTemplate();
+    await this.loadConcreteBlockTemplate();
+    await this.loadCarTemplate();
+    await this.loadBarrelTemplate();
   }
 
   destroy(): void {
@@ -2024,17 +2030,24 @@ export class WorldSystem {
     return group;
   }
 
-  private async loadBarrelMarkerTexture(): Promise<void> {
-    try {
-      const texture = await new TextureLoader().loadAsync('/sprites/shotgun-muzzle-flash.png');
-      texture.generateMipmaps = false;
-      for (const material of this.barrelMarkerMaterials) {
-        material.map = texture;
-        material.needsUpdate = true;
-      }
-    } catch (error) {
-      console.warn('Failed to load barrel warning sprite.', error);
+  private loadBarrelMarkerTexture(): Promise<void> {
+    if (this.barrelMarkerTextureLoadPromise) {
+      return this.barrelMarkerTextureLoadPromise;
     }
+
+    this.barrelMarkerTextureLoadPromise = new TextureLoader()
+      .loadAsync('/sprites/shotgun-muzzle-flash.png')
+      .then((texture) => {
+        texture.generateMipmaps = false;
+        for (const material of this.barrelMarkerMaterials) {
+          material.map = texture;
+          material.needsUpdate = true;
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to load barrel warning sprite.', error);
+      });
+    return this.barrelMarkerTextureLoadPromise;
   }
 
   private assignObstacleId(root: Group, obstacleId: number): void {

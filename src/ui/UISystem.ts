@@ -718,8 +718,6 @@ export class UISystem {
     this.overlayStateSfxToggle.type = 'button';
     this.overlayStateMusicToggle.className = 'overlay-menu-toggle';
     this.overlayStateMusicToggle.type = 'button';
-    this.menuSelectSound.prime();
-    this.menuConfirmSound.prime();
     this.installMenuAudioCues();
     this.overlayButton.addEventListener('click', () => {
       this.onPrimaryAction?.();
@@ -942,7 +940,6 @@ export class UISystem {
       mobileOrientationGate,
     );
     host.append(this.root);
-    this.driverDialogSound.prime();
   }
 
   setState(gameState: GameStateType): void {
@@ -1012,6 +1009,26 @@ export class UISystem {
     }
 
     this.updateMobileControlsVisibility(gameState);
+  }
+
+  async preloadAll(): Promise<void> {
+    const sources = [
+      ...Object.values(DRIVER_PORTRAITS),
+      ...Object.values(WEAPON_ART),
+      GUNNER_HANDGUN_HUD_ART,
+      MENU_LOGO,
+      MENU_LOGO_SMALL,
+      ...Object.values(ROLE_CHARACTER_ART),
+      '/ui/menu/role-callout-dot.png',
+    ];
+    await Promise.all(
+      [...new Set(sources)].map(async (source) => {
+        const image = new Image();
+        image.src = source;
+        await image.decode();
+      }),
+    );
+    await document.fonts?.ready;
   }
 
   setAudioPreferences(preferences: AudioPreferenceState): void {

@@ -108,7 +108,6 @@ export class BazookaWeapon {
 
   private loadedScene: Object3D | null = null;
   private viewmodelLoadPromise: Promise<void> | null = null;
-  private viewmodelLoadTimer: number | null = null;
   private ammo = 0;
   private cooldown = 0;
   private muzzleFlashTimer = 0;
@@ -140,8 +139,6 @@ export class BazookaWeapon {
       poolSize: 3,
       volume: this.config.bazooka.audio.impactVolume,
     });
-    this.launchSound.primeDeferred(8000);
-    this.impactSound.primeDeferred(8100);
 
     this.viewmodelRoot.name = 'BazookaViewmodel';
     this.contentRoot.name = 'BazookaContentRoot';
@@ -168,7 +165,6 @@ export class BazookaWeapon {
     this.createExplosionPool();
     this.applyViewmodelPose();
     this.setEquipped(false);
-    this.scheduleViewmodelLoad(8000);
   }
 
   reset(): void {
@@ -188,6 +184,10 @@ export class BazookaWeapon {
     this.clearExplosions();
     this.applyViewmodelPose();
     this.updateMuzzleAnchorFromMarker();
+  }
+
+  preloadAll(): Promise<void> {
+    return this.ensureViewmodelLoaded();
   }
 
   updateRunning(
@@ -327,7 +327,6 @@ export class BazookaWeapon {
   }
 
   destroy(): void {
-    this.cancelScheduledViewmodelLoad();
     this.camera.remove(this.viewmodelRoot);
     this.worldEffectsRoot.removeFromParent();
     this.disposeObject(this.loadedScene);
@@ -364,41 +363,15 @@ export class BazookaWeapon {
     }
   }
 
-  private ensureViewmodelLoaded(): void {
+  private ensureViewmodelLoaded(): Promise<void> {
     if (this.loadedScene || this.viewmodelLoadPromise) {
-      return;
+      return this.viewmodelLoadPromise ?? Promise.resolve();
     }
 
-    this.cancelScheduledViewmodelLoad();
     this.viewmodelLoadPromise = this.loadViewmodel().finally(() => {
       this.viewmodelLoadPromise = null;
     });
-  }
-
-  private scheduleViewmodelLoad(delayMs: number): void {
-    if (this.loadedScene || this.viewmodelLoadPromise || this.viewmodelLoadTimer !== null) {
-      return;
-    }
-
-    if (typeof window === 'undefined') {
-      this.ensureViewmodelLoaded();
-      return;
-    }
-
-    this.viewmodelLoadTimer = window.setTimeout(() => {
-      this.viewmodelLoadTimer = null;
-      this.ensureViewmodelLoaded();
-    }, Math.max(0, delayMs));
-  }
-
-  private cancelScheduledViewmodelLoad(): void {
-    if (this.viewmodelLoadTimer === null || typeof window === 'undefined') {
-      this.viewmodelLoadTimer = null;
-      return;
-    }
-
-    window.clearTimeout(this.viewmodelLoadTimer);
-    this.viewmodelLoadTimer = null;
+    return this.viewmodelLoadPromise;
   }
 
   private prepareModel(root: Object3D): void {

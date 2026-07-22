@@ -26,7 +26,6 @@ import type {
 } from '../../core/types';
 import {
   clamp,
-  getRuntimePerformanceProfile,
   randomInt,
   randomRange,
   sampleRoadCurveOffset,
@@ -131,7 +130,6 @@ export class BossSystem {
   private readonly preStrikeSound: SoundEffectPool;
   private readonly projectileHitSound: SoundEffectPool;
   private readonly helicopterLoop: LoopingSound;
-  private readonly runtimeProfile = getRuntimePerformanceProfile();
   private readonly defaultBossTransform: DebugTransformSnapshot;
   private readonly snapshotFallback: BossSnapshot = {
     status: 'inactive',
@@ -171,8 +169,7 @@ export class BossSystem {
   private weakpoints: BossWeakpointRecord[] = [];
   private projectileSpawnNodes: Object3D[] = [];
   private readonly rotorBaseRotations = new Map<Object3D, { x: number; y: number; z: number }>();
-  private bossModelLoadStarted = false;
-  private bossModelLoadTimer: number | null = null;
+  private bossModelLoadPromise: Promise<void> | null = null;
   private warnedMissingNodes = false;
 
   constructor(
@@ -207,8 +204,6 @@ export class BossSystem {
       highpassHz: 70,
       lowpassHz: 3200,
     });
-    this.preStrikeSound.primeDeferred(15000);
-    this.projectileHitSound.primeDeferred(15100);
 
     this.hull = new Mesh(
       HULL_GEOMETRY,
@@ -304,7 +299,6 @@ export class BossSystem {
     this.scene.add(this.root);
     this.createProjectilePool();
     this.createImpactBurstPool();
-    this.scheduleBossModelLoad(16000);
     this.reset();
   }
 
@@ -345,7 +339,6 @@ export class BossSystem {
   }
 
   destroy(): void {
-    this.cancelScheduledBossModelLoad();
     this.reset();
     this.root.removeFromParent();
     for (const projectile of this.projectiles) {
@@ -369,6 +362,14 @@ export class BossSystem {
 
   setAudioEnabled(enabled: boolean): void {
     this.helicopterLoop.setEnabled(enabled);
+  }
+
+  preloadAll(): Promise<void> {
+    return this.ensureBossModelLoaded();
+  }
+
+  preloadAudio(): Promise<void> {
+    return this.helicopterLoop.preload();
   }
 
   pauseAudio(): void {
@@ -1111,78 +1112,40 @@ export class BossSystem {
     this.applyBossDamage(this.config.boss.weakpointBreakDamageByLevel[this.level - 1] ?? 0);
   }
 
-  private scheduleBossModelLoad(delayMs: number): void {
-    if (this.bossModelLoadStarted || this.bossModelLoadTimer !== null) {
-      return;
+  private ensureBossModelLoaded(): Promise<void> {
+    if (this.bossModelLoadPromise) {
+      return this.bossModelLoadPromise;
     }
 
-    if (typeof window === 'undefined') {
-      this.ensureBossModelLoaded();
-      return;
-    }
-
-    this.bossModelLoadTimer = window.setTimeout(() => {
-      this.bossModelLoadTimer = null;
-      if (this.runtimeProfile.perfDebug) {
-        console.info('[perf] boss model load start', {
-          tier: this.runtimeProfile.qualityTier,
-          path: this.config.boss.assetPath,
-        });
-      }
-      this.ensureBossModelLoaded();
-    }, Math.max(0, delayMs));
+    this.bossModelLoadPromise = this.loadBossModel();
+    return this.bossModelLoadPromise;
   }
 
-  private ensureBossModelLoaded(): void {
-    if (this.bossModelLoadStarted) {
-      return;
-    }
-
-    this.cancelScheduledBossModelLoad();
-    this.bossModelLoadStarted = true;
-    this.loadBossModel();
-  }
-
-  private cancelScheduledBossModelLoad(): void {
-    if (this.bossModelLoadTimer === null || typeof window === 'undefined') {
-      this.bossModelLoadTimer = null;
-      return;
-    }
-
-    window.clearTimeout(this.bossModelLoadTimer);
-    this.bossModelLoadTimer = null;
-  }
-
-  private loadBossModel(): void {
-    void import('three/examples/jsm/loaders/GLTFLoader.js')
-      .then(({ GLTFLoader }) => {
+  private async loadBossModel(): Promise<void> {
+    try {
+      const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+      try {
         const loader = new GLTFLoader();
-        loader.load(
-          this.config.boss.assetPath,
-          (gltf) => {
-            const model = gltf.scene;
-            model.name = 'HelicopterBossModel';
-            model.traverse((node) => {
-              if (node instanceof Mesh) {
-                node.castShadow = false;
-                node.receiveShadow = false;
-              }
-            });
-            this.root.add(model);
-            this.modelRoot = model;
-            this.applyBossModelTransform();
-            this.bindBossModelNodes(model);
-            this.proceduralGroup.visible = false;
-          },
-          undefined,
-          (error) => {
-            console.warn('[BossSystem] Failed to load helicopter boss model, using procedural fallback.', error);
-          },
-        );
-      })
-      .catch((error) => {
-        console.warn('[BossSystem] Failed to initialize GLTFLoader for boss model.', error);
-      });
+        const gltf = await loader.loadAsync(this.config.boss.assetPath);
+        const model = gltf.scene;
+        model.name = 'HelicopterBossModel';
+        model.traverse((node) => {
+          if (node instanceof Mesh) {
+            node.castShadow = false;
+            node.receiveShadow = false;
+          }
+        });
+        this.root.add(model);
+        this.modelRoot = model;
+        this.applyBossModelTransform();
+        this.bindBossModelNodes(model);
+        this.proceduralGroup.visible = false;
+      } catch (error) {
+        console.warn('[BossSystem] Failed to load helicopter boss model, using procedural fallback.', error);
+      }
+    } catch (error) {
+      console.warn('[BossSystem] Failed to initialize GLTFLoader for boss model.', error);
+    }
   }
 
   private bindBossModelNodes(model: Object3D): void {

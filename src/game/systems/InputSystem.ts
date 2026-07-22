@@ -83,7 +83,13 @@ export class InputSystem {
       return;
     }
 
-    this.domElement.requestPointerLock();
+    try {
+      void this.domElement.requestPointerLock().catch(() => {
+        // Embedded and automated browsers may reject pointer lock; aiming still works without it.
+      });
+    } catch {
+      // Older browsers can throw synchronously instead of returning a rejected promise.
+    }
   }
 
   destroy(): void {

@@ -167,9 +167,6 @@ export class EnemySystem {
       poolSize: 2,
       volume: this.config.enemies.audio.approachVolume,
     });
-    this.normalDeathSound.primeDeferred(1200);
-    this.tankDeathSound.primeDeferred(1450);
-    this.approachSound.primeDeferred(1700);
     const latchModel = this.config.enemies.runnerModel;
     this.latchPresentationRoot.name = 'RunnerLatchPresentation';
     this.latchPresentationRoot.visible = false;
@@ -235,7 +232,6 @@ export class EnemySystem {
       this.scene.add(roadSplat.group);
     }
 
-    this.scheduleHumanoidAssetLoad('walker', 450);
     if (this.runtimeProfile.perfDebug) {
       console.info('[perf] enemies', {
         tier: this.runtimeProfile.qualityTier,
@@ -276,6 +272,14 @@ export class EnemySystem {
     }
   }
 
+  async preloadAll(): Promise<void> {
+    this.clearHumanoidAssetTimers();
+    await this.loadHumanoidAssets('walker');
+    await this.loadHumanoidAssets('runner');
+    await this.loadLatchPresentation();
+    await this.loadHumanoidAssets('tank');
+  }
+
   destroy(): void {
     this.reset();
     this.clearHumanoidAssetTimers();
@@ -283,6 +287,11 @@ export class EnemySystem {
     this.tankDeathSound.destroy();
     this.approachSound.destroy();
     this.latchPresentationRoot.removeFromParent();
+    for (const zombie of this.pool) zombie.group.removeFromParent();
+    for (const burst of this.hitBloodBursts) burst.group.removeFromParent();
+    for (const burst of this.bodySplatterBursts) burst.group.removeFromParent();
+    for (const burst of this.bloodBursts) burst.group.removeFromParent();
+    for (const splat of this.roadSplats) splat.group.removeFromParent();
   }
 
   spawn(type: ZombieType, laneX: number, zPosition: number): boolean {
@@ -1627,7 +1636,6 @@ export class EnemySystem {
     zombie.state = 'inactive';
     zombie.group.visible = false;
     zombie.group.position.set(0, 0, 999);
-    zombie.group.removeFromParent();
     zombie.velocity.set(0, 0, 0);
     zombie.deathAngularVelocity.set(0, 0, 0);
     zombie.hitFlash = 0;
@@ -1999,7 +2007,6 @@ export class EnemySystem {
     burst.active = false;
     burst.group.visible = false;
     burst.group.position.set(0, 0, 999);
-    burst.group.removeFromParent();
     burst.material.opacity = 0;
     burst.gravity = 0;
     burst.stickToRoad = false;
@@ -2113,7 +2120,6 @@ export class EnemySystem {
     splat.active = false;
     splat.group.visible = false;
     splat.group.position.set(0, this.config.world.roadSurfaceY, 999);
-    splat.group.removeFromParent();
     splat.material.opacity = 0;
     splat.baseOpacity = 0;
   }
@@ -2223,6 +2229,7 @@ export class EnemySystem {
         }
       } catch (error) {
         console.warn('Failed to load latched runner presentation GLB.', error);
+        this.latchPresentationLoaded = true;
       } finally {
         this.latchPresentationPromise = null;
       }

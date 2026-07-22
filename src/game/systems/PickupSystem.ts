@@ -71,7 +71,6 @@ export class PickupSystem {
       volume: this.config.pickups.audio.pickupVolume,
       playbackRate: 1,
     });
-    this.pickupSound.prime();
     this.scene.add(this.root);
     this.createPool();
     this.reset();
@@ -95,6 +94,11 @@ export class PickupSystem {
     for (const pickup of this.pickups) {
       this.deactivate(pickup);
     }
+  }
+
+  async preloadAll(): Promise<void> {
+    await this.loadShotgunTemplate();
+    await this.loadBazookaTemplate();
   }
 
   update(

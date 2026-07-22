@@ -135,8 +135,7 @@ export class ShotgunWeapon {
 
   private loadedScene: Object3D | null = null;
   private viewmodelLoadPromise: Promise<void> | null = null;
-  private viewmodelLoadTimer: number | null = null;
-  private timingPreloadTimer: number | null = null;
+  private muzzleFlashSpritePromise: Promise<void> | null = null;
   private timingPreloadStarted = false;
   private gunshotTimingProbe: HTMLAudioElement | null = null;
   private delayTimingProbe: HTMLAudioElement | null = null;
@@ -192,8 +191,6 @@ export class ShotgunWeapon {
       poolSize: 3,
       volume: this.config.shotgun.audio.delayVolume,
     });
-    this.gunshotSound.primeDeferred(1800);
-    this.delaySound.primeDeferred(1900);
     this.resolvedCockingDuration = this.config.shotgun.viewmodel.spinDuration;
 
     this.viewmodelRoot.name = 'ShotgunViewmodel';
@@ -236,9 +233,21 @@ export class ShotgunWeapon {
 
     this.applyViewmodelPose();
     this.setEquipped(false);
-    this.scheduleTimingPreloads(1800);
-    void this.loadMuzzleFlashSprite();
-    this.scheduleViewmodelLoad(2000);
+  }
+
+  async preloadAll(): Promise<void> {
+    await this.ensureViewmodelLoaded();
+    await this.ensureMuzzleFlashSpriteLoaded();
+  }
+
+  async preloadAudioTiming(): Promise<void> {
+    const [gunshotDuration, cockingDuration] = await Promise.all([
+      this.gunshotSound.getDuration(),
+      this.delaySound.getDuration(),
+    ]);
+    this.resolvedGunshotDuration = gunshotDuration;
+    this.resolvedCockingDuration = cockingDuration;
+    this.timingPreloadStarted = true;
   }
 
   reset(): void {
@@ -444,8 +453,6 @@ export class ShotgunWeapon {
   }
 
   destroy(): void {
-    this.cancelScheduledViewmodelLoad();
-    this.cancelScheduledTimingPreloads();
     this.camera.remove(this.viewmodelRoot);
     this.worldEffectsRoot.removeFromParent();
     this.disposeObject(this.loadedScene);
@@ -479,41 +486,15 @@ export class ShotgunWeapon {
     }
   }
 
-  private ensureViewmodelLoaded(): void {
+  private ensureViewmodelLoaded(): Promise<void> {
     if (this.loadedScene || this.viewmodelLoadPromise) {
-      return;
+      return this.viewmodelLoadPromise ?? Promise.resolve();
     }
 
-    this.cancelScheduledViewmodelLoad();
     this.viewmodelLoadPromise = this.loadViewmodel().finally(() => {
       this.viewmodelLoadPromise = null;
     });
-  }
-
-  private scheduleViewmodelLoad(delayMs: number): void {
-    if (this.loadedScene || this.viewmodelLoadPromise || this.viewmodelLoadTimer !== null) {
-      return;
-    }
-
-    if (typeof window === 'undefined') {
-      this.ensureViewmodelLoaded();
-      return;
-    }
-
-    this.viewmodelLoadTimer = window.setTimeout(() => {
-      this.viewmodelLoadTimer = null;
-      this.ensureViewmodelLoaded();
-    }, Math.max(0, delayMs));
-  }
-
-  private cancelScheduledViewmodelLoad(): void {
-    if (this.viewmodelLoadTimer === null || typeof window === 'undefined') {
-      this.viewmodelLoadTimer = null;
-      return;
-    }
-
-    window.clearTimeout(this.viewmodelLoadTimer);
-    this.viewmodelLoadTimer = null;
+    return this.viewmodelLoadPromise;
   }
 
   private mountModel(model: Object3D): void {
@@ -809,41 +790,14 @@ export class ShotgunWeapon {
     setLocalPositionFromWorld(this.contentRoot, this.muzzleWorld, this.muzzleAnchor);
   }
 
-  private scheduleTimingPreloads(delayMs: number): void {
-    if (this.timingPreloadStarted || this.timingPreloadTimer !== null) {
-      return;
-    }
-
-    if (typeof window === 'undefined') {
-      this.startTimingPreloads();
-      return;
-    }
-
-    this.timingPreloadTimer = window.setTimeout(() => {
-      this.timingPreloadTimer = null;
-      this.startTimingPreloads();
-    }, Math.max(0, delayMs));
-  }
-
   private startTimingPreloads(): void {
     if (this.timingPreloadStarted) {
       return;
     }
 
-    this.cancelScheduledTimingPreloads();
     this.timingPreloadStarted = true;
     this.preloadGunshotTiming();
     this.preloadDelayTiming();
-  }
-
-  private cancelScheduledTimingPreloads(): void {
-    if (this.timingPreloadTimer === null || typeof window === 'undefined') {
-      this.timingPreloadTimer = null;
-      return;
-    }
-
-    window.clearTimeout(this.timingPreloadTimer);
-    this.timingPreloadTimer = null;
   }
 
   private preloadDelayTiming(): void {
@@ -975,6 +929,13 @@ export class ShotgunWeapon {
     } catch (error) {
       console.warn('Failed to load shotgun muzzle flash sprite.', error);
     }
+  }
+
+  private ensureMuzzleFlashSpriteLoaded(): Promise<void> {
+    if (!this.muzzleFlashSpritePromise) {
+      this.muzzleFlashSpritePromise = this.loadMuzzleFlashSprite();
+    }
+    return this.muzzleFlashSpritePromise;
   }
 
   // The shotgun UI bracket width is derived from the same spread value used by pellets,

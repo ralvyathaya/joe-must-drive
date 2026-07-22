@@ -176,6 +176,7 @@ export class VehicleRigSystem {
     gunner: 0,
   };
   private loadedScene: Object3D | null = null;
+  private vehicleModelPromise: Promise<void> | null = null;
   private activeRole: GameplayRole = 'gunner';
   private driverPistolStanceActive = false;
   private currentFov = 72;
@@ -448,7 +449,13 @@ export class VehicleRigSystem {
     this.camera.parent?.add(this.vehicleRig);
     this.cameraPitch.add(this.camera);
     this.reset();
-    void this.loadVehicleModel();
+  }
+
+  preloadAll(): Promise<void> {
+    if (!this.vehicleModelPromise) {
+      this.vehicleModelPromise = this.loadVehicleModel();
+    }
+    return this.vehicleModelPromise;
   }
 
   getCameraYawPivot(): Object3D {

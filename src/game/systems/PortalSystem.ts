@@ -64,6 +64,7 @@ export class PortalSystem {
   private readonly baseGeometry = new PlaneGeometry(1, 1);
   private readonly particleTexture = this.createParticleTexture();
   private readonly portals: RuntimePortal[] = [];
+  private readonly portalPool: RuntimePortal[] = [];
 
   private time = 0;
   private nextExitSpawnTime = 0;
@@ -96,6 +97,16 @@ export class PortalSystem {
         this.config.portal.returnLabel,
       );
     }
+  }
+
+  preloadAll(): Promise<void> {
+    if (this.portalPool.length === 0) {
+      this.portalPool.push(
+        this.createPortal('exit', this.config.portal.exitLabel),
+        this.createPortal('return', this.config.portal.returnLabel),
+      );
+    }
+    return Promise.resolve();
   }
 
   update(
@@ -137,6 +148,16 @@ export class PortalSystem {
 
   destroy(): void {
     this.clearPortals();
+    for (const portal of this.portalPool) {
+      portal.group.removeFromParent();
+      portal.ringMaterial.dispose();
+      portal.glowMaterial.dispose();
+      portal.baseMaterial.dispose();
+      portal.labelMaterial.dispose();
+      portal.labelTexture.dispose();
+      for (const particle of portal.particles) particle.material.dispose();
+    }
+    this.portalPool.length = 0;
     this.root.removeFromParent();
     this.ringGeometry.dispose();
     this.glowGeometry.dispose();
@@ -162,6 +183,21 @@ export class PortalSystem {
   }
 
   private spawnPortal(kind: PortalKind, laneLocalX: number, z: number, label: string): void {
+    let portal = this.portalPool.find((entry) => entry.kind === kind);
+    if (!portal) {
+      portal = this.createPortal(kind, label);
+      this.portalPool.push(portal);
+    }
+
+    portal.laneLocalX = laneLocalX;
+    portal.z = z;
+    portal.triggered = false;
+    portal.group.visible = true;
+    this.portals.push(portal);
+    this.updatePortalVisual(portal, 0, 0);
+  }
+
+  private createPortal(kind: PortalKind, label: string): RuntimePortal {
     const color = kind === 'return' ? RETURN_PORTAL_COLOR : EXIT_PORTAL_COLOR;
     const group = new Group();
     group.name = kind === 'return' ? 'ReturnPortal' : 'VibeJamExitPortal';
@@ -223,6 +259,7 @@ export class PortalSystem {
     group.add(labelSprite);
 
     const particles = this.createParticles(group, color);
+    group.visible = false;
     this.root.add(group);
 
     const portal: RuntimePortal = {
@@ -236,13 +273,11 @@ export class PortalSystem {
       labelMaterial,
       labelTexture,
       particles,
-      laneLocalX,
-      z,
+      laneLocalX: 0,
+      z: 999,
       triggered: false,
     };
-
-    this.portals.push(portal);
-    this.updatePortalVisual(portal, 0, 0);
+    return portal;
   }
 
   private createParticles(group: Group, color: number): PortalParticle[] {
@@ -403,15 +438,9 @@ export class PortalSystem {
       return;
     }
 
-    this.root.remove(portal.group);
-    portal.ringMaterial.dispose();
-    portal.glowMaterial.dispose();
-    portal.baseMaterial.dispose();
-    portal.labelMaterial.dispose();
-    portal.labelTexture.dispose();
-    for (const particle of portal.particles) {
-      particle.material.dispose();
-    }
+    portal.group.visible = false;
+    portal.group.position.set(0, 0, 999);
+    portal.triggered = false;
     this.portals.splice(index, 1);
   }
 

@@ -34,7 +34,6 @@ export class RewardSystem {
       volume: this.config.rewards.audio.rewardVolume,
       playbackRate: 1,
     });
-    this.rewardSound.prime();
     this.resetRun();
   }
 

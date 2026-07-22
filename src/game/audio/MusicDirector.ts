@@ -38,6 +38,14 @@ export class MusicDirector {
     }
   }
 
+  prefetchAll(): void {
+    for (const key of Object.keys(this.config.tracks) as MusicTrackKey[]) {
+      const audio = this.getTrack(key).audio;
+      audio.preload = 'auto';
+      audio.load();
+    }
+  }
+
   setTrack(trackKey: MusicTrackKey | null): void {
     this.desiredTrack = trackKey;
     if (!this.enabled || !trackKey) {

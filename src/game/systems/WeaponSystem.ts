@@ -77,6 +77,21 @@ export class WeaponSystem {
     }
   }
 
+  async preloadAll(): Promise<void> {
+    await this.pistolWeapon.preloadAll();
+    await this.shotgunWeapon.preloadAll();
+    await this.assaultRifleWeapon.preloadAll();
+    await this.bazookaWeapon.preloadAll();
+  }
+
+  preloadInitial(): Promise<void> {
+    return this.pistolWeapon.preloadInitial();
+  }
+
+  preloadAudioTiming(): Promise<void> {
+    return this.shotgunWeapon.preloadAudioTiming();
+  }
+
   updateRunning(
     deltaTime: number,
     input: InputSystem,

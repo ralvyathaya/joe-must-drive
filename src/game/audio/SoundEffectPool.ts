@@ -41,20 +41,14 @@ export class SoundEffectPool {
     SoundEffectPool.effectsEnabled = enabled;
   }
 
-  prime(): void {
-    const context = this.ensureContext();
-    void this.loadBuffer(context);
+  static async preloadAll(sources: string[]): Promise<void> {
+    const context = this.ensureSharedContext();
+    await Promise.all([...new Set(sources)].map((source) => this.loadSharedBuffer(source, context)));
   }
 
-  primeDeferred(delayMs: number): void {
-    if (typeof window === 'undefined') {
-      this.prime();
-      return;
-    }
-
-    window.setTimeout(() => {
-      this.prime();
-    }, Math.max(0, delayMs));
+  getDuration(): Promise<number> {
+    const context = this.ensureContext();
+    return this.loadBuffer(context).then((buffer) => buffer.duration);
   }
 
   play(
@@ -126,15 +120,24 @@ export class SoundEffectPool {
   }
 
   private loadBuffer(context: AudioContext): Promise<AudioBuffer> {
-    const existingBuffer = SoundEffectPool.sharedBuffers.get(this.source);
+    return SoundEffectPool.loadSharedBuffer(this.source, context);
+  }
+
+  private static loadSharedBuffer(source: string, context: AudioContext): Promise<AudioBuffer> {
+    const existingBuffer = SoundEffectPool.sharedBuffers.get(source);
     if (existingBuffer) {
       return existingBuffer;
     }
 
-    const bufferPromise = fetch(this.source)
-      .then((response) => response.arrayBuffer())
+    const bufferPromise = fetch(source)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load audio ${source}: ${response.status}`);
+        }
+        return response.arrayBuffer();
+      })
       .then((arrayBuffer) => context.decodeAudioData(arrayBuffer.slice(0)));
-    SoundEffectPool.sharedBuffers.set(this.source, bufferPromise);
+    SoundEffectPool.sharedBuffers.set(source, bufferPromise);
     return bufferPromise;
   }
 

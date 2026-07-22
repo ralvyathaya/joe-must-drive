@@ -104,6 +104,10 @@ export class LoopingSound {
     void this.ensurePlaying();
   }
 
+  preload(): Promise<void> {
+    return this.loadBuffer(this.ensureContext()).then(() => undefined);
+  }
+
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (!enabled) {
@@ -259,7 +263,12 @@ export class LoopingSound {
     }
 
     this.bufferPromise = fetch(this.source)
-      .then((response) => response.arrayBuffer())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load audio ${this.source}: ${response.status}`);
+        }
+        return response.arrayBuffer();
+      })
       .then((arrayBuffer) => context.decodeAudioData(arrayBuffer.slice(0)))
       .then((buffer) => {
         this.loopWindow = this.detectLoopWindow(buffer);

@@ -120,6 +120,7 @@ export class PistolWeapon {
   private readonly traceEnd = new Vector3();
   private readonly traceDirection = new Vector3();
   private readonly viewmodelVariants = new Map<FpsViewmodelKey, Object3D>();
+  private readonly viewmodelPromises = new Map<FpsViewmodelKey, Promise<void>>();
   private readonly traceDebugDefaults: PistolTraceDebugSettings;
   private traceDebug: PistolTraceDebugSettings;
 
@@ -173,9 +174,6 @@ export class PistolWeapon {
       poolSize: 2,
       volume: this.config.weapon.audio.reloadVolume,
     });
-    this.gunshotSound.prime();
-    this.emptySound.prime();
-    this.reloadSound.prime();
     this.baseRotation.set(
       MathUtils.degToRad(rotX),
       MathUtils.degToRad(rotY),
@@ -217,7 +215,10 @@ export class PistolWeapon {
     this.muzzleAnchor.position.set(...viewmodel.muzzleOffset);
     this.updateVisualMuzzleAnchorPose();
     this.applyViewmodelPose(false);
-    void this.loadViewmodel(this.currentViewmodelKey);
+  }
+
+  preloadInitial(): Promise<void> {
+    return this.loadViewmodel(PistolWeapon.DEFAULT_VIEWMODEL_KEY);
   }
 
   reset(player: PlayerSystem): void {
@@ -243,6 +244,11 @@ export class PistolWeapon {
     this.restoreAnimatedNodes();
     this.applyViewmodelPose(false);
     this.updateVisualMuzzleAnchorPose();
+  }
+
+  async preloadAll(): Promise<void> {
+    await this.loadViewmodel('driver_pistol');
+    await this.loadViewmodel('gunner_handgun');
   }
 
   updateRunning(
@@ -445,6 +451,23 @@ export class PistolWeapon {
   }
 
   private async loadViewmodel(key: FpsViewmodelKey): Promise<void> {
+    if (this.viewmodelVariants.has(key)) {
+      return;
+    }
+
+    const pending = this.viewmodelPromises.get(key);
+    if (pending) {
+      return pending;
+    }
+
+    const promise = this.loadViewmodelAsset(key).finally(() => {
+      this.viewmodelPromises.delete(key);
+    });
+    this.viewmodelPromises.set(key, promise);
+    return promise;
+  }
+
+  private async loadViewmodelAsset(key: FpsViewmodelKey): Promise<void> {
     try {
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
       const loader = new GLTFLoader();
@@ -455,8 +478,10 @@ export class PistolWeapon {
       }
     } catch (error) {
       console.warn(`Failed to load pistol FPS viewmodel ${key}, using a lightweight fallback.`, error);
+      const fallback = this.createEmergencyFallbackModel();
+      this.viewmodelVariants.set(key, fallback);
       if (this.currentViewmodelKey === key) {
-        this.mountModel(this.createEmergencyFallbackModel());
+        this.mountModel(fallback);
       }
     }
   }
