@@ -2089,6 +2089,13 @@ body {
   max-width: 100%;
 }
 
+.overlay-menu-option-note {
+  margin: -2px 4px 0;
+  color: rgba(224, 214, 200, 0.64);
+  font-size: clamp(0.54rem, min(0.9vw, 1.35vh), 0.68rem);
+  line-height: 1.35;
+}
+
 .overlay-role-select {
   position: relative;
   width: 100%;
@@ -2698,6 +2705,10 @@ body {
 
 .overlay-menu-toggle[data-kind="music"]::after {
   background-image: var(--icon-music);
+}
+
+.overlay-menu-toggle[data-kind="portal"]::after {
+  background-image: var(--icon-chain);
 }
 
 .overlay-menu-hint {
@@ -4028,6 +4039,7 @@ body {
   }
 
   .overlay-menu-copy,
+  .overlay-menu-option-note,
   .overlay-menu-hint,
   .overlay-state-hint,
   .overlay-menu-eyebrow,
