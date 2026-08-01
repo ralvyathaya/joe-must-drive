@@ -288,6 +288,7 @@ export class Game {
     this.uiSystem.onPortalPreferenceChange = (enabled) => {
       this.portalEnabled = enabled;
       this.portalSystem.setEnabled(enabled);
+      if (enabled) void this.portalSystem.preloadAll();
       this.savePortalPreference();
     };
     this.uiSystem.onMobileLaneHoldChange = (direction, active) => {
@@ -419,7 +420,7 @@ export class Game {
           run: async () => {
             await this.worldSystem.preloadAll();
             await this.pickupSystem.preloadAll();
-            await this.portalSystem.preloadAll();
+            if (this.portalEnabled) await this.portalSystem.preloadAll();
           },
         },
         { stage: 'Loading the infected', run: () => this.enemySystem.preloadAll() },
