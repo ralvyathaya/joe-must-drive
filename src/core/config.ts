@@ -944,7 +944,7 @@ export const GAME_CONFIG: GameConfig = {
     },
   },
   portal: {
-    enabled: true,
+    enabled: false,
     redirectUrl: 'https://vibej.am/portal/2026',
     startTimeSeconds: 30,
     spawnSpacingMin: 42,
