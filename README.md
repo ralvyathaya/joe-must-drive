@@ -1,134 +1,109 @@
-# Joe Must Drive
+<p align="center">
+  <img src="public/ui/menu/logo-game.png" alt="Joe Must Drive" width="420" />
+</p>
 
-First-person sidecar zombie survival game made for Vibe Jam 2026.
+<p align="center">
+  <strong>A first-person sidecar zombie survival game built for Vibe Jam 2026.</strong>
+</p>
 
-Drive through a ruined highway, survive zombie swarms, grab risky pickups, fight a helicopter boss, and optionally play online co-op as Driver + Gunner.
+<p align="center">
+  <a href="https://github.com/ralvyathaya/VibeJam-Game/actions/workflows/ci.yml"><img src="https://github.com/ralvyathaya/VibeJam-Game/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-blue.svg" alt="MIT code license" /></a>
+  <img src="https://img.shields.io/badge/Three.js-TypeScript-black" alt="Three.js and TypeScript" />
+</p>
 
-## Features
+Ride shotgun through a ruined highway, survive zombie swarms, collect risky
+weapon pickups, and fight a helicopter boss. Play solo or split control between
+a Driver and Gunner in online co-op.
 
-- First-person Three.js / TypeScript / Vite browser game.
-- Solo mode with Gunner controls.
-- Online co-op room flow with room codes, no login.
-- Role split:
-  - Driver: steer, accelerate, brake, and use pistol-only stance.
-  - Gunner: aim, reload, and use handgun, shotgun, assault rifle, and bazooka.
-- Host-authoritative co-op snapshots for map, health, death, ride, boss, pickup, and reward sync.
-- Runtime FPS viewmodels loaded from GLB assets.
-- Boss fight with weakpoints, lane projectiles, telegraphs, blast feedback, and helicopter audio.
-- Rain, lightning, ramp jumps, pickups, Vibe Jam portal, HUD, pause menu, and death recap.
-- Mobile support with touch controls and compact menu layout.
+## Highlights
+
+- First-person combat with handgun, shotgun, assault rifle, and bazooka.
+- Online Driver + Gunner co-op with room codes and no account required.
+- Host-authoritative synchronization for players, enemies, pickups, rewards,
+  vehicle state, and the boss encounter.
+- Helicopter boss with weak points, telegraphed attacks, and lane projectiles.
+- Mobile touch controls, responsive menus, loading progress, and asset fallbacks.
+- Rain, lightning, ramp jumps, reactive audio, and post-processing effects.
 
 ## Tech
 
-- Three.js
-- TypeScript
-- Vite
-- WebSocket relay using `ws`
+| Area | Implementation |
+| --- | --- |
+| Client | Three.js, TypeScript, Vite |
+| Multiplayer | Browser WebSockets and a lightweight `ws` relay |
+| Rendering | GLB assets, procedural fallbacks, custom speed shader |
+| Architecture | Game loop with focused gameplay, UI, audio, and network systems |
 
-## Requirements
+The host simulates authoritative gameplay and broadcasts snapshots. The relay
+only forwards small JSON messages between the two players; it does not process
+game simulation or serve runtime assets.
 
-- Node.js `>=22.12.0`
-- npm
+## Run locally
 
-## Install
+Requires Node.js 22.12 or newer.
 
 ```bash
 npm install
-```
-
-## Run Locally
-
-Start the game client:
-
-```bash
 npm run dev
 ```
 
-Open the Vite URL shown in the terminal.
+Open the URL printed by Vite. Single-player works without the relay.
 
-## Run The Co-op Relay
-
-In another terminal:
+For co-op, start the relay in a second terminal:
 
 ```bash
 npm run relay
 ```
 
-The relay defaults to:
-
-```text
-ws://localhost:8787
-```
-
-For production, deploy `server/relay.mjs` somewhere that supports WebSockets, then set the game relay URL through the project config/environment used by your deployment.
-
-This repo includes `railway.json` for Railway:
+The client uses `ws://localhost:8787` locally. Set `VITE_COOP_WS_URL` when the
+deployed relay is hosted at a different address:
 
 ```bash
-npm start
-```
-
-Railway should expose:
-
-```text
-wss://your-railway-app.up.railway.app
-```
-
-## Build
-
-```bash
-npm run build
-```
-
-Preview the production build:
-
-```bash
-npm run preview
+VITE_COOP_WS_URL=wss://example.com npm run build
 ```
 
 ## Controls
 
-- Mouse: aim
-- Left click: fire
-- `R`: reload
-- `A` / `D`: lane call / driver steer depending on mode
-- `W`: accelerate as Driver
-- `S`: brake as Driver
-- `Esc`: pause / release pointer lock
-- Mobile: touch buttons and tap-to-unlatch
+| Input | Gunner | Driver |
+| --- | --- | --- |
+| Mouse | Aim | Look |
+| Left click | Fire | Fire pistol |
+| `R` | Reload | Reload |
+| `A` / `D` | Call lane | Steer |
+| `W` / `S` | — | Accelerate / brake |
+| `Esc` | Pause / release pointer lock | Pause / release pointer lock |
 
-## Co-op Flow
+Touch controls are shown automatically on supported mobile layouts.
 
-1. Host opens Co-op and creates a room.
-2. Guest joins with the room code.
-3. Host starts the run when both slots are filled.
-4. Host simulates authoritative game state and broadcasts snapshots.
-5. Guest sends input and receives corrected game state from host.
+## Scripts
 
-The relay only forwards small JSON messages. It does not send model or asset data.
+```bash
+npm test          # Run the Node test suite
+npm run build     # Type-check and create a production build
+npm run preview   # Preview the production build
+npm run relay     # Start the co-op WebSocket relay
+```
 
-## Assets
+Every push and pull request runs the test and production build through GitHub
+Actions.
 
-Runtime assets live under `public/`.
+## Deployment
 
-Main asset groups:
+The client is a static Vite build and can be hosted on any static host. The
+WebSocket relay requires a Node.js host; [`railway.json`](railway.json) contains
+the included Railway configuration and `/health` is available for health checks.
 
-- `public/models/vehicles/`
-- `public/models/viewmodels/`
-- `public/models/bosses/`
-- `public/models/enemies/`
-- `public/audio/`
-- `public/ui/`
+## AI-assisted production
 
-Most art/audio in this project was AI-generated or AI-assisted. Before reusing assets outside this project, verify the license/source of each asset and replace anything that is not safe for your intended use.
-
-## Development Notes
-
-- Debug/tuning overlays are intended for local development only.
-- Keep raw source assets outside `public/` unless they must ship.
-- `dist/`, `node_modules/`, `.tmp/`, and `tmp/` are ignored.
-- For game jam submission builds, keep post-deadline commits limited to clear bugfixes only.
+AI tools assisted parts of the code, image, sound, voice, and music workflow.
+System design, integration, debugging, gameplay tuning, and final acceptance
+remain the responsibility of the project author. See
+[`ASSET_ATTRIBUTION.md`](ASSET_ATTRIBUTION.md) for the current provenance and
+reuse status of shipped assets.
 
 ## License
 
-Code license and asset license are intentionally not declared in this README yet. Add explicit `LICENSE` and asset attribution files before treating this repo as fully open-source/reusable.
+Source code is available under the [MIT License](LICENSE). Art, models, audio,
+music, fonts, logos, and other media under `public/` are **not** covered by the
+MIT License; see [asset attribution](ASSET_ATTRIBUTION.md) before reusing them.
