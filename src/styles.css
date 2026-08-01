@@ -4347,6 +4347,10 @@ body {
   }
 
   .hud {
+    display: grid;
+    grid-template-columns: max-content minmax(120px, 1fr) max-content;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 4px 8px;
     padding:
       max(8px, env(safe-area-inset-top))
       max(8px, env(safe-area-inset-right))
@@ -4354,20 +4358,33 @@ body {
       max(8px, env(safe-area-inset-left));
   }
 
+  .hud-top,
   .hud-bottom {
     display: contents;
   }
 
   .reward-hud {
+    grid-column: 1;
+    grid-row: 1;
     max-width: clamp(128px, 21vw, 150px);
   }
 
   .radar-panel {
+    grid-column: 2;
+    grid-row: 1;
     width: min(40vw, 300px);
   }
 
   .stats-panel--side {
+    grid-column: 3;
+    grid-row: 1;
     gap: 3px;
+  }
+
+  .hud-middle {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    min-height: 0;
   }
 
   .stat-chip--score {
@@ -4403,14 +4420,14 @@ body {
 
   .hud-panel--health,
   .hud-panel--ammo {
-    position: absolute;
-    bottom: auto;
+    position: static;
     margin: 0;
   }
 
   .hud-panel--health {
-    top: clamp(72px, 21dvh, 88px);
-    left: max(8px, env(safe-area-inset-left));
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
     width: clamp(126px, 20vw, 154px);
     padding: 7px 9px 8px;
     border-radius: 12px;
@@ -4432,10 +4449,23 @@ body {
   }
 
   .hud-panel--ammo {
-    top: clamp(98px, 28dvh, 116px);
-    right: max(8px, env(safe-area-inset-right));
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
     transform: scale(0.82);
     transform-origin: right top;
+  }
+
+  .driver-panel {
+    left: 50%;
+    right: auto;
+    bottom: clamp(82px, 24dvh, 102px);
+    width: min(48vw, 320px);
+    transform: translate(-50%, 10px) scale(0.98);
+  }
+
+  .driver-panel[data-visible="true"] {
+    transform: translateX(-50%) scale(1);
   }
 
   .mobile-controls {
