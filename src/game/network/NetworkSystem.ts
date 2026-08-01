@@ -52,7 +52,7 @@ export class NetworkSystem {
     peerConnected: false,
     peerRole: null,
     canStartRun: true,
-    statusText: 'Solo with bot fallback',
+    statusText: 'Create a room or join with a code.',
     relayUrl: this.resolveRelayUrl(),
   };
 
@@ -130,7 +130,7 @@ export class NetworkSystem {
       peerConnected: false,
       peerRole: null,
       canStartRun: true,
-      statusText: 'Solo with bot fallback',
+      statusText: 'Create a room or join with a code.',
     });
   }
 
@@ -147,7 +147,7 @@ export class NetworkSystem {
       peerConnected: false,
       peerRole: null,
       canStartRun: true,
-      statusText: 'Solo with bot fallback',
+      statusText: 'Create a room or join with a code.',
     });
   }
 
@@ -249,7 +249,7 @@ export class NetworkSystem {
             peerConnected: false,
             peerRole: null,
             canStartRun: true,
-            statusText: 'Relay disconnected. Continuing with bot fallback.',
+            statusText: 'Connection lost. A bot has taken over.',
           });
         });
         socket.addEventListener('error', () => {
@@ -259,7 +259,7 @@ export class NetworkSystem {
             peerConnected: false,
             peerRole: null,
             canStartRun: true,
-            statusText: 'Relay unavailable. Continuing with bot fallback.',
+            statusText: 'Co-op is unavailable. A bot has taken over.',
           });
           resolve();
         }, { once: true });
@@ -269,7 +269,7 @@ export class NetworkSystem {
           peerConnected: false,
           peerRole: null,
           canStartRun: true,
-          statusText: 'Relay unavailable. Continuing with bot fallback.',
+          statusText: 'Co-op is unavailable. A bot has taken over.',
         });
         resolve();
       }
@@ -294,7 +294,7 @@ export class NetworkSystem {
         peerConnected: false,
         peerRole: null,
         canStartRun: true,
-        statusText: 'Solo with bot fallback',
+        statusText: 'Create a room or join with a code.',
       });
     }
   }
@@ -319,7 +319,7 @@ export class NetworkSystem {
           peerConnected: false,
           peerRole: null,
           canStartRun: false,
-          statusText: `Lobby ${message.roomCode}. Share the code and wait for the empty slot.`,
+          statusText: `Room ${message.roomCode} created. Share the code with your partner.`,
         });
         break;
       case 'joined':
@@ -333,7 +333,7 @@ export class NetworkSystem {
           peerConnected: true,
           peerRole: message.peerRole ?? null,
           canStartRun: false,
-          statusText: `Joined lobby ${message.roomCode}. Room owner starts the run.`,
+          statusText: `Joined room ${message.roomCode}. Waiting for the host to start.`,
         });
         break;
       case 'peerJoined':
@@ -342,7 +342,7 @@ export class NetworkSystem {
           peerConnected: true,
           peerRole: message.role === 'driver' ? 'driver' : 'gunner',
           canStartRun: this.session.isHost,
-          statusText: `${this.session.roomCode || 'Room'} ready. Both seats are filled.`,
+          statusText: 'Room ready. Both seats are filled.',
         });
         break;
       case 'peerLeft':
@@ -351,7 +351,7 @@ export class NetworkSystem {
           peerConnected: false,
           peerRole: null,
           canStartRun: true,
-          statusText: 'Partner left. Bot fallback is active.',
+          statusText: 'Partner left. A bot has taken over.',
         });
         break;
       case 'input':
