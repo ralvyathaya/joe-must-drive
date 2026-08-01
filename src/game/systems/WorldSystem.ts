@@ -1893,6 +1893,9 @@ export class WorldSystem {
 
       maybeMesh.castShadow = castShadow;
       maybeMesh.receiveShadow = receiveShadow;
+      if (!maybeMesh.geometry.boundingSphere) {
+        maybeMesh.geometry.computeBoundingSphere();
+      }
     });
   }
 
