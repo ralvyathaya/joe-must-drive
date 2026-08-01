@@ -109,6 +109,7 @@ export class UISystem {
   onReturnToLobbyAction?: () => void;
   onSfxPreferenceChange?: (enabled: boolean) => void;
   onMusicPreferenceChange?: (enabled: boolean) => void;
+  onPortalPreferenceChange?: (enabled: boolean) => void;
   onMobileLaneHoldChange?: (direction: -1 | 1, active: boolean) => void;
   onMobileLaneTap?: (direction: -1 | 1) => void;
   onMobileReload?: () => void;
@@ -139,6 +140,8 @@ export class UISystem {
   private readonly overlayMenuDriverRoleImage = document.createElement('img');
   private readonly overlayMenuSfxToggle = document.createElement('button');
   private readonly overlayMenuMusicToggle = document.createElement('button');
+  private readonly overlayMenuPortalToggle = document.createElement('button');
+  private readonly overlayMenuPortalCopy = document.createElement('p');
   private readonly overlayMenuCoopStatus = document.createElement('div');
   private readonly overlayMenuRoomInput = document.createElement('input');
   private readonly overlayMenuCreateRoomButton = document.createElement('button');
@@ -288,6 +291,7 @@ export class UISystem {
     sfxEnabled: true,
     musicEnabled: true,
   };
+  private portalEnabled = false;
   private pauseSubtitle = PAUSE_SUBHEADINGS[0];
   private deathSubtitle = DEATH_SUBHEADINGS[0];
   private driverPanelHold = 0;
@@ -670,8 +674,7 @@ export class UISystem {
     this.overlayMenuCoopModeButton.dataset.kind = 'coop';
     this.overlayMenuCoopModeButton.textContent = 'Co-op';
     this.overlayMenuCopy.className = 'overlay-menu-copy';
-    this.overlayMenuCopy.textContent =
-      'Built roughly 90% with AI tools: Cursor + Codex for code, Nano Banana for image iteration, ElevenLabs for voices and SFX passes, plus Gemini-assisted music and prompt workflow.';
+    this.overlayMenuCopy.textContent = 'Play solo or team up online as Driver and Gunner.';
     this.overlayMenuStats.className = 'overlay-menu-stats';
     this.overlayMenuRoleSelect.className = 'overlay-role-select';
     this.setupRoleButton(
@@ -679,14 +682,14 @@ export class UISystem {
       this.overlayMenuGunnerRoleImage,
       'gunner',
       'Police',
-      ['Full weapon kit'],
+      ['Gunner · full weapon kit'],
     );
     this.setupRoleButton(
       this.overlayMenuDriverRoleButton,
       this.overlayMenuDriverRoleImage,
       'driver',
       'Joe',
-      ['Free roam driver + pistol'],
+      ['Driver · full bike control + pistol'],
     );
     this.overlayMenuRoleSelect.append(
       this.overlayMenuGunnerRoleButton,
@@ -696,7 +699,7 @@ export class UISystem {
     this.overlayMenuRoomInput.className = 'overlay-menu-room-input';
     this.overlayMenuRoomInput.type = 'text';
     this.overlayMenuRoomInput.maxLength = 6;
-    this.overlayMenuRoomInput.placeholder = 'ROOM';
+    this.overlayMenuRoomInput.placeholder = 'CODE';
     this.overlayMenuRoomInput.autocomplete = 'off';
     this.overlayMenuRoomInput.spellcheck = false;
     this.overlayMenuCreateRoomButton.className = 'overlay-menu-toggle overlay-menu-toggle--coop';
@@ -714,6 +717,13 @@ export class UISystem {
     this.overlayMenuSfxToggle.type = 'button';
     this.overlayMenuMusicToggle.className = 'overlay-menu-toggle';
     this.overlayMenuMusicToggle.type = 'button';
+    this.overlayMenuPortalToggle.className = 'overlay-menu-toggle';
+    this.overlayMenuPortalToggle.type = 'button';
+    this.overlayMenuPortalToggle.setAttribute('aria-describedby', 'portal-option-description');
+    this.overlayMenuPortalCopy.id = 'portal-option-description';
+    this.overlayMenuPortalCopy.className = 'overlay-menu-option-note';
+    this.overlayMenuPortalCopy.textContent =
+      'Adds portals that can take you to other Vibe Jam 2026 games.';
     this.overlayStateSfxToggle.className = 'overlay-menu-toggle';
     this.overlayStateSfxToggle.type = 'button';
     this.overlayStateMusicToggle.className = 'overlay-menu-toggle';
@@ -743,6 +753,9 @@ export class UISystem {
     this.overlayMenuMusicToggle.addEventListener('click', () => {
       this.toggleMusicPreference();
     });
+    this.overlayMenuPortalToggle.addEventListener('click', () => {
+      this.togglePortalPreference();
+    });
     this.overlayMenuCreateRoomButton.addEventListener('click', () => {
       this.onCreateCoopRoom?.(this.selectedRole);
     });
@@ -769,7 +782,7 @@ export class UISystem {
 
     const menuEyebrow = document.createElement('div');
     menuEyebrow.className = 'overlay-menu-eyebrow';
-    menuEyebrow.textContent = 'Driver Chaos Sidecar Survival';
+    menuEyebrow.textContent = 'First-Person Sidecar Survival';
 
     const menuTagline = document.createElement('p');
     menuTagline.className = 'overlay-menu-tagline';
@@ -780,7 +793,7 @@ export class UISystem {
 
     const menuOptionsLabel = document.createElement('div');
     menuOptionsLabel.className = 'overlay-menu-section-label';
-    menuOptionsLabel.textContent = 'Boot Options';
+    menuOptionsLabel.textContent = 'Game Setup';
 
     const playModeOptions = document.createElement('div');
     playModeOptions.className = 'overlay-menu-playmodes';
@@ -791,6 +804,8 @@ export class UISystem {
       playModeOptions,
       this.overlayMenuSfxToggle,
       this.overlayMenuMusicToggle,
+      this.overlayMenuPortalToggle,
+      this.overlayMenuPortalCopy,
     );
 
     const coopOptions = document.createElement('div');
@@ -828,11 +843,11 @@ export class UISystem {
     menuRight.className = 'overlay-menu-right';
 
     const controlsCard = this.createMenuCard('Controls');
-    this.menuReloadControlRow = this.createMenuControlRow('R', 'Reload handgun');
+    this.menuReloadControlRow = this.createMenuControlRow('R', 'Reload weapon');
     controlsCard.append(
       this.createMenuControlRow('LMB', 'Fire weapon'),
-      this.createMenuControlRow('Mouse', 'Aim sidecar gun'),
-      this.createMenuControlRow('A / D Hold', 'Call for left or right lane'),
+      this.createMenuControlRow('Mouse', 'Aim weapon'),
+      this.createMenuControlRow('A / D Hold', 'Call a lane change'),
       this.menuReloadControlRow,
     );
 
@@ -840,8 +855,8 @@ export class UISystem {
     gameplayCard.append(
       this.createMenuPoint('Driver controls the bike. You react, shoot, and survive.'),
       this.createMenuPoint('Aim lower when a runner clamps onto the sidecar.'),
-      this.createMenuPoint('Shotgun saves panic moments. Bazooka deletes bad boards.'),
-      this.createMenuPoint('Barrels punish crowds, but hard blockers still end the run.'),
+      this.createMenuPoint('Shotgun handles crowds. Bazooka clears the road.'),
+      this.createMenuPoint('Exploding barrels clear crowds. Hard blockers end the run.'),
       this.createMenuPoint('Call lanes early. The driver is reckless, not psychic.'),
     );
 
@@ -853,11 +868,11 @@ export class UISystem {
     const pausedAudioLabel = document.createElement('div');
     pausedAudioLabel.className = 'overlay-menu-section-label';
     pausedAudioLabel.textContent = 'Audio';
-    this.pauseReloadControlRow = this.createMenuControlRow('R', 'Reload handgun');
+    this.pauseReloadControlRow = this.createMenuControlRow('R', 'Reload weapon');
     this.overlayStateControlsPanel.append(
       pausedControlsTitle,
       this.createMenuControlRow('LMB', 'Fire weapon'),
-      this.createMenuControlRow('Mouse', 'Aim sidecar gun'),
+      this.createMenuControlRow('Mouse', 'Aim weapon'),
       this.createMenuControlRow('A / D Hold', 'Call for a lane change'),
       this.pauseReloadControlRow,
       pausedAudioLabel,
@@ -877,13 +892,13 @@ export class UISystem {
       this.createSummaryRow('skull', 'Zombies Killed', this.overlayStateKillsValue),
       this.createSummaryRow('chain', 'Pickups', this.overlayStatePickupsValue),
       this.createSummaryRow('skull', 'Risk Pickups', this.overlayStateRiskValue),
-      this.createSummaryRow('score', 'Gunner Acc.', this.overlayStateAccuracyValue),
+      this.createSummaryRow('score', 'Shot Accuracy', this.overlayStateAccuracyValue),
       this.createSummaryRow('chain', 'Latch Saves', this.overlayStateLatchSavesValue),
     );
 
     const causeTitle = document.createElement('h2');
     causeTitle.className = 'overlay-state-panel-title overlay-state-panel-title--danger';
-    causeTitle.textContent = 'Cause Of Death';
+    causeTitle.textContent = 'Cause of Death';
     const causeBadge = document.createElement('div');
     causeBadge.className = 'overlay-state-cause-badge';
     this.overlayStateCausePanel.append(
@@ -922,6 +937,7 @@ export class UISystem {
     this.overlayMenu.append(menuLeft, menuCenter, menuRight);
     const mobileOrientationGate = this.createMobileOrientationGate();
     this.syncAudioButtons();
+    this.syncPortalButton();
     this.setSelectedRole(this.selectedRole, false);
     this.setMenuPlayMode(this.menuPlayMode, false);
     this.root.append(
@@ -1036,6 +1052,11 @@ export class UISystem {
     this.syncAudioButtons();
   }
 
+  setPortalEnabled(enabled: boolean): void {
+    this.portalEnabled = enabled;
+    this.syncPortalButton();
+  }
+
   setTouchControlsEnabled(enabled: boolean): void {
     this.mobileControlsEnabled = enabled;
     this.root.dataset.touchControls = enabled ? 'true' : 'false';
@@ -1094,7 +1115,7 @@ export class UISystem {
 
     const label = document.createElement('span');
     label.className = 'overlay-menu-lobby-label';
-    label.textContent = session.isHost ? 'Your Lobby' : 'Joined Lobby';
+    label.textContent = session.isHost ? 'Your Room' : 'Joined Room';
 
     const code = document.createElement('span');
     code.className = 'overlay-menu-lobby-code';
@@ -2168,7 +2189,7 @@ export class UISystem {
 
     const body = document.createElement('div');
     body.className = 'mobile-orientation-copy';
-    body.textContent = 'Joe Must Drive is built for wide controls. Turn your phone sideways to play.';
+    body.textContent = 'Joe Must Drive plays best in landscape. Turn your phone sideways to play.';
 
     gate.append(iconWrap, title, body);
     return gate;
@@ -2214,6 +2235,19 @@ export class UISystem {
     this.audioPreferences.musicEnabled = nextValue;
     this.syncAudioButtons();
     this.onMusicPreferenceChange?.(nextValue);
+  }
+
+  private togglePortalPreference(): void {
+    this.portalEnabled = !this.portalEnabled;
+    this.syncPortalButton();
+    this.onPortalPreferenceChange?.(this.portalEnabled);
+  }
+
+  private syncPortalButton(): void {
+    this.overlayMenuPortalToggle.dataset.enabled = this.portalEnabled ? 'true' : 'false';
+    this.overlayMenuPortalToggle.dataset.kind = 'portal';
+    this.overlayMenuPortalToggle.setAttribute('aria-pressed', String(this.portalEnabled));
+    this.overlayMenuPortalToggle.textContent = 'Enable Vibe Jam Portal';
   }
 
   private syncAudioButtons(): void {
