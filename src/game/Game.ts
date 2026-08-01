@@ -49,6 +49,7 @@ import { WeaponSystem } from './systems/WeaponSystem';
 import { WorldSystem } from './systems/WorldSystem';
 
 const AUDIO_PREFERENCES_KEY = 'sidecar-of-the-dead.audio-preferences';
+const PORTAL_PREFERENCE_KEY = 'sidecar-of-the-dead.portal-enabled';
 
 type DeathCauseKey =
   | 'overrun'
@@ -84,6 +85,7 @@ export class Game {
   private readonly rampJumpSound: SoundEffectPool;
   private readonly gameOverSound: SoundEffectPool;
   private readonly incomingPortalLaunch = this.isIncomingPortalLaunch();
+  private portalEnabled = this.incomingPortalLaunch || this.loadPortalPreference();
   private readonly playerPosition = new Vector3();
   private readonly playerForward = new Vector3();
   private readonly handleOverlayKeyDown = (event: KeyboardEvent) => {
@@ -145,7 +147,7 @@ export class Game {
     peerConnected: false,
     peerRole: null,
     canStartRun: true,
-    statusText: 'Solo with bot fallback',
+    statusText: 'Create a room or join with a code.',
     relayUrl: '',
   };
   private coopStats: CoopRunStats = {
@@ -168,6 +170,7 @@ export class Game {
     this.worldSystem = new WorldSystem(this.rendererSystem.scene, GAME_CONFIG);
     this.bossSystem = new BossSystem(this.rendererSystem.scene, GAME_CONFIG);
     this.portalSystem = new PortalSystem(this.rendererSystem.scene, GAME_CONFIG);
+    this.portalSystem.setEnabled(this.portalEnabled);
     this.pickupSystem = new PickupSystem(this.rendererSystem.scene, GAME_CONFIG);
     this.enemySystem = new EnemySystem(this.rendererSystem.scene, GAME_CONFIG);
     this.weaponSystem = new WeaponSystem(this.rendererSystem.camera, GAME_CONFIG);
@@ -282,6 +285,11 @@ export class Game {
       this.saveAudioPreferences();
       this.applyAudioPreferences();
     };
+    this.uiSystem.onPortalPreferenceChange = (enabled) => {
+      this.portalEnabled = enabled;
+      this.portalSystem.setEnabled(enabled);
+      this.savePortalPreference();
+    };
     this.uiSystem.onMobileLaneHoldChange = (direction, active) => {
       this.inputSystem.setVirtualLaneHeld(direction, active);
     };
@@ -379,6 +387,7 @@ export class Game {
       this.returnToMainLobby(false);
     };
     this.uiSystem.setAudioPreferences(this.audioPreferences);
+    this.uiSystem.setPortalEnabled(this.portalEnabled);
     this.uiSystem.setTouchControlsEnabled(this.inputSystem.usesTouchControls());
     this.uiSystem.setCoopSession(this.coopSession);
     this.applyAudioPreferences();
@@ -1925,6 +1934,22 @@ export class Game {
       );
     } catch {
       // Ignore storage failures and keep runtime defaults.
+    }
+  }
+
+  private loadPortalPreference(): boolean {
+    try {
+      return window.localStorage.getItem(PORTAL_PREFERENCE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  private savePortalPreference(): void {
+    try {
+      window.localStorage.setItem(PORTAL_PREFERENCE_KEY, String(this.portalEnabled));
+    } catch {
+      // Ignore storage failures and keep the current session preference.
     }
   }
 
