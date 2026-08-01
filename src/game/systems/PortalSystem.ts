@@ -71,14 +71,23 @@ export class PortalSystem {
   private nextExitSide: -1 | 1 = 1;
   private incomingPortalRef: string | null = null;
   private redirectLocked = false;
+  private enabled: boolean;
 
   constructor(
     scene: Scene,
     private readonly config: GameConfig,
   ) {
+    this.enabled = this.config.portal.enabled;
     this.root.name = 'VibeJamPortalSystem';
     scene.add(this.root);
     this.reset();
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    if (!enabled) {
+      this.clearPortals();
+    }
   }
 
   reset(options: PortalResetOptions = {}): void {
@@ -89,7 +98,7 @@ export class PortalSystem {
     this.incomingPortalRef = options.incomingPortalRef ?? null;
     this.redirectLocked = false;
 
-    if (this.config.portal.enabled && this.incomingPortalRef) {
+    if (this.enabled && this.incomingPortalRef) {
       this.spawnPortal(
         'return',
         this.config.portal.returnPortalX,
@@ -116,7 +125,7 @@ export class PortalSystem {
     elapsedSeconds: number,
     playerState: PlayerState,
   ): PortalRedirectPayload | null {
-    if (!this.config.portal.enabled) {
+    if (!this.enabled) {
       return null;
     }
 
