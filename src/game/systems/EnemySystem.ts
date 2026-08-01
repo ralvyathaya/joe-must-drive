@@ -17,6 +17,7 @@ import {
   Quaternion,
   Raycaster,
   Scene,
+  SkinnedMesh,
   Vector2,
   Vector3,
   type Intersection,
@@ -971,6 +972,7 @@ export class EnemySystem {
       maybeMesh.castShadow = false;
       maybeMesh.receiveShadow = true;
     });
+    this.precomputeRaycastBounds(primitiveRoot);
     group.add(primitiveRoot);
     group.visible = false;
     group.position.z = 999;
@@ -2211,6 +2213,7 @@ export class EnemySystem {
           this.applyTemplateMaterials(gltf.scene, textureMaterials);
         }
         this.prepareLatchPresentationScene(gltf.scene);
+        this.precomputeRaycastBounds(gltf.scene);
         this.latchPresentationRoot.add(gltf.scene);
         this.latchPresentationMixer = new AnimationMixer(gltf.scene);
         const clip = gltf.animations[0] ?? null;
@@ -2296,6 +2299,8 @@ export class EnemySystem {
       if (!moveClip || !deathClip) {
         throw new Error(`${type} zombie animations are missing required clips.`);
       }
+
+      this.precomputeRaycastBounds(characterGltf.scene);
 
       this.humanoidAssets[type] = {
         template: characterGltf.scene,
@@ -2543,6 +2548,17 @@ export class EnemySystem {
   private assignPoolId(root: Object3D, poolId: number): void {
     root.traverse((object) => {
       object.userData.poolId = poolId;
+    });
+  }
+
+  private precomputeRaycastBounds(root: Object3D): void {
+    root.updateMatrixWorld(true);
+    root.traverse((object) => {
+      if (object instanceof SkinnedMesh) {
+        object.computeBoundingSphere();
+      } else if (object instanceof Mesh && !object.geometry.boundingSphere) {
+        object.geometry.computeBoundingSphere();
+      }
     });
   }
 }
