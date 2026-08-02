@@ -715,6 +715,7 @@ export interface GameConfig {
     recoilRecovery: number;
     unlockTimeSeconds: number;
     scriptedPickupTimeSeconds: number;
+    preBossLeadSeconds: number;
     tracer: {
       duration: number;
       width: number;

@@ -539,6 +539,7 @@ export const GAME_CONFIG: GameConfig = {
     recoilRecovery: 6.4,
     unlockTimeSeconds: 52,
     scriptedPickupTimeSeconds: 52,
+    preBossLeadSeconds: 8,
     tracer: {
       duration: 0.052,
       width: 0.014,
