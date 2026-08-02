@@ -56,6 +56,7 @@ export class PickupSystem {
   private nextSpawnZ = -110;
   private scriptedRifleSpawned = false;
   private scriptedBazookaSpawned = false;
+  private preBossRifleSpawned = new Set<number>();
   private bossBazookaCooldownTimer = 0;
   private bossBazookaBossActive = false;
   private criticalMedkitTimer = -1;
@@ -83,6 +84,7 @@ export class PickupSystem {
     );
     this.scriptedRifleSpawned = false;
     this.scriptedBazookaSpawned = false;
+    this.preBossRifleSpawned.clear();
     this.bossBazookaCooldownTimer = randomRange(
       this.config.pickups.bossBazookaIntervalMinSeconds,
       this.config.pickups.bossBazookaIntervalMaxSeconds,
@@ -245,6 +247,29 @@ export class PickupSystem {
         this.spawn(slot, loadout, player, bazookaUnlocked, elapsedSeconds, 'bazooka', {
           bossActive,
         });
+      }
+    }
+    // Spawn an assault rifle shortly before each boss encounter so the player is armed in time.
+    const preBossLeadSeconds = this.config.assaultRifle.preBossLeadSeconds;
+    if (rifleUnlocked && preBossLeadSeconds > 0 && !bossActive) {
+      const encounterTimes = this.config.boss.encounterTimes;
+      for (let index = 0; index < encounterTimes.length; index += 1) {
+        const encounterTime = encounterTimes[index];
+        const windowStart = encounterTime - preBossLeadSeconds;
+        if (elapsedSeconds >= windowStart && elapsedSeconds < encounterTime) {
+          if (!this.preBossRifleSpawned.has(index) && !this.hasActiveKind('assaultRifle')) {
+            const slot = this.pickups.find((entry) => !entry.active);
+            if (slot) {
+              const laneIndex = this.pickLaneNearestToPlayer(playerX);
+              this.spawn(slot, loadout, player, bazookaUnlocked, elapsedSeconds, 'assaultRifle', {
+                bossActive,
+                laneIndex,
+              });
+              this.preBossRifleSpawned.add(index);
+            }
+          }
+          break;
+        }
       }
     }
     const desiredWeaponCount =
@@ -1106,6 +1131,20 @@ export class PickupSystem {
 
   private hasActiveKind(kind: PickupType): boolean {
     return this.pickups.some((pickup) => pickup.active && pickup.kind === kind);
+  }
+
+  private pickLaneNearestToPlayer(playerX: number): number {
+    const laneCenters = this.config.world.laneCenters;
+    let bestIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < laneCenters.length; index += 1) {
+      const distance = Math.abs(laneCenters[index] - playerX);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    }
+    return bestIndex;
   }
 
   private updateCriticalMedkitRescue(
