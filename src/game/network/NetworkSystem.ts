@@ -43,6 +43,7 @@ export class NetworkSystem {
 
   private socket: WebSocket | null = null;
   private pingTimer = 0;
+  private controlActionPending = false;
   private session: CoopSessionState = {
     role: 'solo',
     selectedRole: 'gunner',
@@ -183,19 +184,27 @@ export class NetworkSystem {
   }
 
   sendStart(seed: number): void {
-    if (!this.canSendRealtime() || !this.session.canStartRun) {
+    if (!this.canSendRealtime() || !this.session.canStartRun || this.controlActionPending) {
       return;
     }
 
+    this.controlActionPending = true;
     this.send({ type: 'control', action: 'start', seed });
+    setTimeout(() => {
+      this.controlActionPending = false;
+    }, 500);
   }
 
   sendRetry(seed: number): void {
-    if (!this.canSendRealtime() || !this.session.canStartRun) {
+    if (!this.canSendRealtime() || !this.session.canStartRun || this.controlActionPending) {
       return;
     }
 
+    this.controlActionPending = true;
     this.send({ type: 'control', action: 'retry', seed });
+    setTimeout(() => {
+      this.controlActionPending = false;
+    }, 500);
   }
 
   sendPause(): void {
