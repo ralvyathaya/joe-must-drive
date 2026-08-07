@@ -125,7 +125,8 @@ wss.on('connection', (socket) => {
         Array.from(room.roles.values()).find((role) => role === 'driver' || role === 'gunner') ??
         null;
       const occupiedRoles = new Set(room.roles.values());
-      const resolvedRole = occupiedRoles.has(requestedRole)
+      const hadConflict = occupiedRoles.has(requestedRole);
+      const resolvedRole = hadConflict
         ? requestedRole === 'driver' ? 'gunner' : 'driver'
         : requestedRole;
       attachPeer(socket, room, resolvedRole);
@@ -135,6 +136,7 @@ wss.on('connection', (socket) => {
         role: resolvedRole,
         peerRole,
         seed: room.seed,
+        roleConflict: hadConflict ? { requested: requestedRole, assigned: resolvedRole } : undefined,
       });
       broadcast(room, socket, { type: 'peerJoined', role: resolvedRole });
       return;

@@ -11,7 +11,7 @@ type RelayControlAction = 'start' | 'retry' | 'pause' | 'resume' | 'lobby';
 
 type RelayEnvelope =
   | { type: 'created'; roomCode: string; role: CoopRole; seed: number }
-  | { type: 'joined'; roomCode: string; role: CoopRole; peerRole?: GameplayRole | null; seed: number }
+  | { type: 'joined'; roomCode: string; role: CoopRole; peerRole?: GameplayRole | null; seed: number; roleConflict?: { requested: GameplayRole; assigned: GameplayRole } }
   | { type: 'peerJoined'; role: CoopRole }
   | { type: 'peerLeft' }
   | { type: 'input'; frame: RemoteInputFrame }
@@ -324,6 +324,9 @@ export class NetworkSystem {
         });
         break;
       case 'joined':
+        const conflictNote = message.roleConflict
+          ? ` Role ${message.roleConflict.requested} was taken, you are now ${message.roleConflict.assigned}.`
+          : '';
         this.setSession({
           role: message.role,
           selectedRole: message.role === 'driver' ? 'driver' : 'gunner',
@@ -334,7 +337,7 @@ export class NetworkSystem {
           peerConnected: true,
           peerRole: message.peerRole ?? null,
           canStartRun: false,
-          statusText: `Joined room ${message.roomCode}. Waiting for the host to start.`,
+          statusText: `Joined room ${message.roomCode}.${conflictNote} Waiting for the host to start.`,
         });
         break;
       case 'peerJoined':
