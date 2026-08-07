@@ -119,6 +119,7 @@ export class UISystem {
   onCreateCoopRoom?: (role: GameplayRole) => void;
   onJoinCoopRoom?: (roomCode: string, role: GameplayRole) => void;
   onSinglePlayerAction?: () => void;
+  onContinueSolo?: () => void;
 
   private readonly root = document.createElement('div');
   private readonly overlay = document.createElement('div');
@@ -309,6 +310,7 @@ export class UISystem {
   private coopSession: CoopSessionState | null = null;
   private lastMenuCueTarget: Element | null = null;
   private lastMenuSelectCueAt = 0;
+  private peerLeftOverlayActive = false;
 
   constructor(host: HTMLElement) {
     this.root.className = 'ui-root';
@@ -733,9 +735,19 @@ export class UISystem {
       this.onPrimaryAction?.();
     });
     this.overlayStatePrimaryButton.addEventListener('click', () => {
+      if (this.peerLeftOverlayActive) {
+        this.peerLeftOverlayActive = false;
+        this.onContinueSolo?.();
+        return;
+      }
       this.onPrimaryAction?.();
     });
     this.overlayStateSecondaryButton.addEventListener('click', () => {
+      if (this.peerLeftOverlayActive) {
+        this.peerLeftOverlayActive = false;
+        this.onReturnToLobbyAction?.();
+        return;
+      }
       this.onRestartAction?.();
     });
     this.overlayStateLobbyButton.addEventListener('click', () => {
@@ -2601,6 +2613,28 @@ export class UISystem {
 
     this.lastVisibleDriverPresentationKey = visibleDriverPresentation.key;
     this.driverDialogSound.play(0.055, 1.12 + Math.random() * 0.06);
+  }
+
+  setPeerLeftOverlay(visible: boolean): void {
+    this.peerLeftOverlayActive = visible;
+    if (visible) {
+      this.overlay.hidden = false;
+      this.overlay.dataset.mode = 'state';
+      this.overlayMenu.hidden = true;
+      this.overlayState.hidden = false;
+      this.overlayDialog.hidden = true;
+      this.overlayState.dataset.kind = 'paused';
+      this.overlayStateTitle.textContent = 'Partner Disconnected';
+      this.overlayStateSubtitle.textContent = 'Your co-op partner has left. Continue solo or return to lobby.';
+      this.overlayStatePrimaryButton.textContent = 'Continue Solo';
+      this.overlayStateSecondaryButton.textContent = 'Return to Lobby';
+      this.overlayStateSecondaryButton.hidden = false;
+      this.overlayStateLobbyButton.hidden = true;
+      this.overlayStateControlsPanel.hidden = true;
+      this.overlayStateSummaryPanel.hidden = true;
+      this.overlayStateCausePanel.hidden = true;
+      this.overlayStateHint.textContent = '';
+    }
   }
 
 }

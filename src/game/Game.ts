@@ -390,6 +390,16 @@ export class Game {
     this.networkSystem.onRemoteReturnToLobby = () => {
       this.returnToMainLobby(false);
     };
+    this.networkSystem.onPeerLeft = () => {
+      if (this.state === 'running') {
+        this.pauseRun(false);
+      }
+      this.uiSystem.setPeerLeftOverlay(true);
+    };
+    this.uiSystem.onContinueSolo = () => {
+      this.networkSystem.startSolo();
+      this.resumeRun(false);
+    };
     this.uiSystem.setAudioPreferences(this.audioPreferences);
     this.uiSystem.setPortalEnabled(this.portalEnabled);
     this.uiSystem.setTouchControlsEnabled(this.inputSystem.usesTouchControls());

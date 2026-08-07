@@ -39,6 +39,7 @@ export class NetworkSystem {
   onRemotePause?: () => void;
   onRemoteResume?: () => void;
   onRemoteReturnToLobby?: () => void;
+  onPeerLeft?: () => void;
 
   private socket: WebSocket | null = null;
   private pingTimer = 0;
@@ -351,8 +352,9 @@ export class NetworkSystem {
           peerConnected: false,
           peerRole: null,
           canStartRun: true,
-          statusText: 'Partner left. A bot has taken over.',
+          statusText: 'Partner left. Choose to continue solo or return to lobby.',
         });
+        this.onPeerLeft?.();
         break;
       case 'input':
         this.onRemoteInput?.(message.frame);
