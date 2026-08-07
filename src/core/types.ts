@@ -1160,6 +1160,7 @@ export interface CoopSessionState {
   canStartRun: boolean;
   statusText: string;
   relayUrl: string;
+  pingMs?: number;
 }
 
 export interface RemoteInputFrame {

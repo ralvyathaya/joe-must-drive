@@ -772,7 +772,10 @@ export class Game {
       player: this.playerSystem.state,
       weapon: this.weaponSystem.getStatus(this.playerSystem),
       reward: this.rewardSystem.getState(),
-      coopSession: this.coopSession,
+      coopSession: {
+        ...this.coopSession,
+        pingMs: this.networkSystem.getPingMs(),
+      },
       coopStats: this.coopStats,
       ride,
       boss: this.bossSystem.getSnapshot(),

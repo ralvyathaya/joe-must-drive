@@ -43,6 +43,8 @@ export class NetworkSystem {
 
   private socket: WebSocket | null = null;
   private pingTimer = 0;
+  private pingSentAt = 0;
+  private lastPingMs = 0;
   private controlActionPending = false;
   private session: CoopSessionState = {
     role: 'solo',
@@ -163,8 +165,13 @@ export class NetworkSystem {
       return;
     }
 
-    this.pingTimer = 8;
+    this.pingTimer = 2;
+    this.pingSentAt = performance.now();
     this.send({ type: 'ping' });
+  }
+
+  getPingMs(): number {
+    return this.lastPingMs;
   }
 
   sendInput(frame: RemoteInputFrame): void {
@@ -401,6 +408,7 @@ export class NetworkSystem {
         });
         break;
       case 'pong':
+        this.lastPingMs = Math.round(performance.now() - this.pingSentAt);
         break;
       default:
         break;

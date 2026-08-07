@@ -1147,6 +1147,16 @@ export class UISystem {
     line.className = 'overlay-menu-lobby-line';
     line.textContent = session.statusText;
 
+    if (session.peerConnected && session.pingMs !== undefined) {
+      const pingLine = document.createElement('div');
+      pingLine.className = 'overlay-menu-lobby-line overlay-menu-lobby-ping';
+      const pingQuality = session.pingMs < 50 ? 'Excellent' : session.pingMs < 100 ? 'Good' : session.pingMs < 150 ? 'Fair' : 'Poor';
+      pingLine.textContent = `Ping: ${session.pingMs}ms (${pingQuality})`;
+      pingLine.dataset.quality = pingQuality.toLowerCase();
+      this.overlayMenuCoopStatus.append(header, slots, line, pingLine);
+      return;
+    }
+
     this.overlayMenuCoopStatus.append(header, slots, line);
   }
 
