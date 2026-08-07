@@ -33,6 +33,7 @@ import type {
   RadarContact,
   RunEventType,
   ZombieModelVariant,
+  ZombieSnapshot,
   ZombieType,
 } from '../../core/types';
 import { getRuntimePerformanceProfile, randomRange } from '../../core/utils';
@@ -625,6 +626,65 @@ export class EnemySystem {
       (count, zombie) => count + (zombie.active && zombie.state === 'alive' && zombie.type === type ? 1 : 0),
       0,
     );
+  }
+
+  getZombieSnapshots(): ZombieSnapshot[] {
+    return this.pool
+      .filter((zombie) => zombie.active)
+      .map((zombie) => ({
+        id: zombie.id,
+        type: zombie.type,
+        x: zombie.group.position.x,
+        z: zombie.group.position.z,
+        state: zombie.state,
+        health: zombie.health,
+        latched: this.latchedRunner?.id === zombie.id,
+      }));
+  }
+
+  applyZombieSnapshots(snapshots: ZombieSnapshot[]): void {
+    const activeIds = new Set(snapshots.map((snapshot) => snapshot.id));
+
+    for (const zombie of this.pool) {
+      if (zombie.active && !activeIds.has(zombie.id)) {
+        this.deactivate(zombie);
+      }
+    }
+
+    for (const snapshot of snapshots) {
+      const zombie = this.pool[snapshot.id];
+      if (!zombie) continue;
+
+      if (!zombie.active) {
+        zombie.active = true;
+        zombie.state = snapshot.state;
+        zombie.type = snapshot.type;
+        zombie.config = this.config.enemies.types[snapshot.type];
+        zombie.health = snapshot.health;
+        zombie.group.visible = true;
+        zombie.group.position.set(snapshot.x, 0, snapshot.z);
+        zombie.group.scale.setScalar(zombie.config.scale);
+        this.resetFlashMaterials(zombie.primitiveFlashMaterials);
+        if (this.isHumanoidType(snapshot.type)) {
+          this.enableHumanoidVisual(zombie, snapshot.type);
+        } else {
+          this.enablePrimitiveVisual(zombie);
+        }
+      } else {
+        zombie.state = snapshot.state;
+        zombie.health = snapshot.health;
+        zombie.group.position.x = snapshot.x;
+        zombie.group.position.z = snapshot.z;
+      }
+
+      if (snapshot.latched && this.latchedRunner?.id !== zombie.id) {
+        this.latchedRunner = zombie;
+        this.attachLatchPresentation(zombie);
+      } else if (!snapshot.latched && this.latchedRunner?.id === zombie.id) {
+        this.detachLatchPresentation(zombie);
+        this.latchedRunner = null;
+      }
+    }
   }
 
   setLatchAnchor(anchor: Object3D | null): void {

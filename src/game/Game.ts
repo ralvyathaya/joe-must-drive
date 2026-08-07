@@ -354,6 +354,9 @@ export class Game {
       this.rewardSystem.applySnapshot(snapshot.reward);
       this.playerSystem.applySnapshot(snapshot.player);
       this.driverSystem.applySnapshot(snapshot.ride);
+      if (snapshot.zombies) {
+        this.enemySystem.applyZombieSnapshots(snapshot.zombies);
+      }
       this.coopStats = { ...snapshot.stats };
       this.frameRideState = snapshot.ride;
       this.lastRideState = snapshot.ride;
@@ -1007,7 +1010,7 @@ export class Game {
       return;
     }
 
-    this.networkSnapshotTimer = 0.16;
+    this.networkSnapshotTimer = this.bossSystem.isCombatActive() ? 0.08 : 0.1;
     const ride = this.frameRideState ?? this.lastRideState;
     if (!ride) {
       return;
@@ -1025,6 +1028,7 @@ export class Game {
       stats: { ...this.coopStats },
       presentation: this.weaponSystem.getPresentationState(this.coopSession.role),
       boss: this.bossSystem.getSnapshot(),
+      zombies: this.enemySystem.getZombieSnapshots(),
     };
     this.networkSystem.sendSnapshot(snapshot);
   }

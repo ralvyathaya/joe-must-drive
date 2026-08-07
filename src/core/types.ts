@@ -1188,6 +1188,16 @@ export interface RemotePresentationState {
   firePulse: number;
 }
 
+export interface ZombieSnapshot {
+  id: number;
+  type: ZombieType;
+  x: number;
+  z: number;
+  state: ZombieLifecycleState;
+  health: number;
+  latched: boolean;
+}
+
 export interface CoopSnapshot {
   gameState: GameStateType;
   elapsedSeconds: number;
@@ -1199,6 +1209,7 @@ export interface CoopSnapshot {
   stats: CoopRunStats;
   presentation: RemotePresentationState;
   boss: BossSnapshot;
+  zombies: ZombieSnapshot[];
 }
 
 export interface LoadoutState {
