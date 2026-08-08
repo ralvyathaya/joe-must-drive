@@ -480,6 +480,20 @@ export class Game {
   start(): void {
     this.gameLoop.start();
   }
+  
+  // Call this when game is fully loaded and ready
+  markAsReadyForWaveDash(): void {
+    const wavedash = (window as any).Wavadash;
+    if (wavedash && typeof wavedash.init === 'function') {
+      try {
+        void wavedash.init({ debug: true }).catch((err: unknown) => {
+          console.warn('[WaveDash] Initialization failed:', err);
+        });
+      } catch (error) {
+        console.error('[WaveDash] Failed to initialize:', error);
+      }
+    }
+  }
 
   destroy(): void {
     this.gameLoop.stop();

@@ -2,16 +2,6 @@ import './styles.css';
 import { Game } from './game/Game';
 import type { BootProgress } from './core/boot';
 
-// Import Wavedash SDK (will be available in WaveDash environment)
-// In local dev, this will be undefined but won't break anything
-let Wavedash: any = null;
-try {
-  // @ts-ignore - Dynamic import for Wavedash SDK
-  Wavedash = await import('@wvdsh/sdk-js');
-} catch {
-  console.log('WaveDash not available in local development');
-}
-
 const root = document.querySelector<HTMLDivElement>('#app');
 
 if (!root) {
@@ -28,6 +18,16 @@ const updateLoading = ({ stage, percent }: BootProgress): void => {
   if (loaderFill) loaderFill.style.width = `${percent}%`;
   if (loaderStage) loaderStage.textContent = stage;
   if (loaderPercent) loaderPercent.textContent = `${percent}%`;
+  
+  // Update progress for WaveDash if available
+  const wavedash = (window as any).Wavedash;
+  if (wavedash && typeof wavedash.updateLoadProgressZeroToOne === 'function') {
+    try {
+      wavedash.updateLoadProgressZeroToOne(percent / 100);
+    } catch (e) {
+      console.warn('[WaveDash] Progress update failed:', e);
+    }
+  }
 };
 
 loaderRetry?.addEventListener('click', () => window.location.reload());
@@ -38,23 +38,11 @@ const boot = async (): Promise<void> => {
   try {
     game = new Game(root);
     await game.prepare(updateLoading);
+    
     game.start();
     
-    // Initialize Wavedash once the game is fully loaded and ready to play
-    if (Wavedash && Wavedash.default) {
-      const wavedashSDK = Wavedash.default;
-      console.log('[Wavedash] Initializing...', wavedashSDK);
-      
-      try {
-        await wavedashSDK.init({ debug: true });
-        console.log('[Wavedash] Initialization complete');
-      } catch (error) {
-        console.warn('[Wavedash] Init failed (expected in local dev):', error);
-        // Don't fail the game initialization - just warn
-      }
-    } else {
-      console.log('[Wavedash] Not available - running locally without platform features');
-    }
+    // Initialize WaveDash after game is fully loaded
+    game.markAsReadyForWaveDash();
     
     if (loader) {
       loader.dataset.hidden = 'true';
@@ -72,3 +60,4 @@ void boot();
 window.addEventListener('beforeunload', () => {
   game?.destroy();
 });
+
