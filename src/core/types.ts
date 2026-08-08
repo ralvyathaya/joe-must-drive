@@ -1093,6 +1093,7 @@ export interface RewardEvent {
   wasExplosive: boolean;
   clearedLatch: boolean;
   distanceToPlayer: number;
+  airTimeBonus?: number; // Optional: Score bonus for kills made during ramp jumps (defaults to 0)
 }
 
 export type RewardAccoladeTone = 'none' | 'rare' | 'tank' | 'wipe' | 'survive' | 'clutch';
