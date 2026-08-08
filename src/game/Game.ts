@@ -60,6 +60,21 @@ import { VehicleRigSystem } from './systems/VehicleRigSystem';
 import { WeaponSystem } from './systems/WeaponSystem';
 import { WorldSystem } from './systems/WorldSystem';
 
+// Import WaveDash SDK for leaderboards and achievements
+let WavadashSDK: any = null;
+try {
+  const module = await import('@wvdsh/sdk-js');
+  WavadashSDK = (module as any).default || module;
+} catch (error) {
+  console.log('[WaveDash] SDK not available in local development - continuing without platform features');
+}
+
+const LEADERBOARDS = {
+  TIME_SCORED: 'time-scored',
+  SCORE_TOTAL: 'score-total',
+  BEST_TIME: 'best-time',
+};
+
 const AUDIO_PREFERENCES_KEY = 'sidecar-of-the-dead.audio-preferences';
 const PORTAL_PREFERENCE_KEY = 'sidecar-of-the-dead.portal-enabled';
 
@@ -1376,6 +1391,12 @@ export class Game {
     const elapsedSeconds = this.spawnSystem.elapsedSeconds;
     this.recordRunResults(this.rewardSystem.getState().lastRunScore, elapsedSeconds);
     
+    // Upload score to leaderboards
+    const finalScore = this.playerSystem.state.score;
+    if (finalScore > 0) {
+      void this.uploadScoreToLeaderboards(finalScore);
+    }
+    
     if (this.inputSystem.isPointerLocked()) {
       this.suppressUnlockPause = true;
       void document.exitPointerLock();
@@ -2199,5 +2220,23 @@ export class Game {
     }
 
     this.stallLoop.pause();
+  }
+  
+  // Upload final score to leaderboards on death/quit
+  uploadScoreToLeaderboards(score: number): void {
+    if (!WavadashSDK || !score || score <= 0) return;
+    
+    try {
+      // Upload to score-total leaderboard
+      WavadashSDK.uploadLeaderboardScore(LEADERBOARDS.SCORE_TOTAL, score, true).catch(() => {});
+      
+      // Track personal best time
+      const elapsedSeconds = this.spawnSystem.elapsedSeconds;
+      WavadashSDK.uploadLeaderboardScore(LEADERBOARDS.BEST_TIME, elapsedSeconds, true).catch(() => {});
+      
+      console.log(`[Leaderboard] Final score uploaded: ${score}`);
+    } catch (error) {
+      console.warn('[Leaderboard] Upload failed:', error);
+    }
   }
 }
