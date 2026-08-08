@@ -2,6 +2,25 @@ import './styles.css';
 import { Game } from './game/Game';
 import type { BootProgress } from './core/boot';
 
+// Initialize WaveDash Three.js integration (if available)
+declare global {
+  interface Window {
+    Wavedash?: {
+      init: (options: { appId: string; version: string }) => Promise<void>;
+    };
+  }
+}
+
+if (window.Wavedash) {
+  void window.Wavedash.init({
+    appId: 'joe-must-drive',
+    version: '0.1.0'
+  }).catch((error: unknown) => {
+    console.warn('[WaveDash] Initialization failed:', error);
+    // Continue even if WaveDash fails - game should still work locally
+  });
+}
+
 const root = document.querySelector<HTMLDivElement>('#app');
 
 if (!root) {
