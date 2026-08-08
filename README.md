@@ -4,106 +4,95 @@
 
 ---
 
-## 🎮 About the Game
+## 🎮 About
 
-Ride shotgun through a ruined highway and survive endless zombie swarms! 
+Ride shotgun through a ruined highway and survive endless zombie swarms! Play solo or team up with a friend in co-op mode - one drives, one shoots. Navigate three lanes of chaos, collect weapon pickups, and face epic helicopter bosses.
 
-Play solo or team up with a friend in co-op mode - one drives (steering), one shoots (gunner). Navigate three lanes of chaos, dodge obstacles, collect weapon pickups, and face epic helicopter bosses.
+### Features
 
-### Core Features
-
-- **Dynamic Gameplay**: Lane-switching strategy, dodging zombies & obstacles
-- **Co-op Mode**: Real-time multiplayer (Driver + Gunner roles)  
-- **Arsenal**: Pistol → Shotgun → Assault Rifle → Bazooka
-- **Boss Battles**: Epic helicopter encounters with weak points
-- **Adaptive Difficulty**: Scales based on player performance
-- **Mobile Support**: Full touch controls
+- **Co-op Multiplayer**: Real-time Driver/Gunner gameplay (or solo)
+- **Dynamic Combat**: Lane-switching strategy against waves of zombies
+- **Weapon Arsenal**: Pistol → Shotgun → Assault Rifle → Bazooka
+- **Boss Battles**: Epic aerial encounters with weak points & telegraphed attacks
+- **Adaptive Difficulty**: AI-powered challenge scaling based on performance
+- **Mobile Support**: Full touch controls for handheld play
 
 ---
 
-## 🚀 Play Now
-
-**Live Demo:** [Deploy to WaveDash and launch here]
-
-Or run locally:
+## 🚀 Run Locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open browser at URL shown in terminal!
+Open the URL shown in terminal to play immediately!
+
+For co-op testing:
+```bash
+npm run relay  # Terminal 2 (optional)
+```
 
 ---
 
-## 🔧 Technical Stack
+## 📦 Build for Production
 
-- **Frontend**: TypeScript + Three.js
-- **Build Tool**: Vite 7.x  
-- **Multiplayer**: WebSocket real-time sync
-- **Rendering**: WebGL 2.0 with post-processing
-- **Performance**: Frame-rate throttling, asset pooling
+```bash
+npm run build      # Optimized production build
+npm run preview    # Test locally before deploying
+```
+
+Build output goes to `dist/` folder (~1.3 MB gzipped).
 
 ---
 
-## 📊 Stats
+## 🌐 Deploy to WaveDash
 
-- **Bundle Size**: ~1.3 MB gzipped
-- **Load Time**: < 2 seconds
-- **FPS**: 60+ on modern devices
-- **Players**: Solo or 2-player co-op
-- **Platform**: Desktop + Mobile browsers
+### Quick Steps
+
+1. Navigate to [WaveDash Dashboard](https://wavedash.io/dashboard)
+2. Create new project named "joe-must-drive"
+3. Upload **all contents** from the `dist/` folder
+4. Set entry point: `index.html`
+5. Deploy and get your live URL!
+
+**URL format**: `https://[your-project].wavedash.io`
+
+See deployment docs for detailed instructions.
+
+---
+
+## ⚙️ Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Language | TypeScript |
+| Framework | Three.js + Vite |
+| Multiplayer | WebSocket |
+| Performance | Asset pooling, frame throttling |
+| Platforms | Desktop browsers + Mobile |
 
 ---
 
 ## 🛠️ Development Commands
 
-```bash
-# Install dependencies
-npm install
-
-# Run dev server
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Start co-op relay server
-npm run relay
-
-# Run tests
-npm test
-```
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview build locally |
+| `npm run relay` | Co-op relay server |
+| `npm test` | Run test suite |
 
 ---
 
-## 📦 Deployment
+## 📊 Stats
 
-### Quick Deploy to WaveDash
-
-1. Run `npm run build`
-2. Upload all contents from `/dist/` folder
-3. Set entry point: `index.html`
-4. Deploy! ✅
-
-See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for detailed instructions.
-
----
-
-## 🌟 Showcase Tips
-
-**Thumbnail**: Action-packed screenshot showing boss battle or co-op gameplay
-
-**Description**: 
-```
-Sidecar zombie survival FPS! Ride shotgun, fight waves of undead, 
-and take down aerial bosses. Solo or co-op with a friend (Driver/Gunner).
-```
-
-**Tags**: #FPS #Zombie #Co-op #Survival #Multiplayer #VibeJam2026
+- **Bundle Size**: ~1.3 MB (gzipped)
+- **Load Time**: < 2 seconds
+- **FPS**: 60+ on modern devices
+- **Players**: Solo or 2-player co-op
+- **Assets**: 97 files total
 
 ---
 
@@ -118,8 +107,8 @@ and take down aerial bosses. Solo or co-op with a friend (Driver/Gunner).
 
 ## 📄 License
 
-Source code under [MIT License](LICENSE). Art, models, audio, music under copyright. See `ASSET_ATTRIBUTION.md` for details.
+Source code under [MIT License](LICENSE). Art, models, audio, and music assets copyright reserved - see `ASSET_ATTRIBUTION.md` for details.
 
 ---
 
-**Good luck with your submission! Good fortune! 🏆**
+**🎮 Good luck with your submission!**
