@@ -2,23 +2,14 @@ import './styles.css';
 import { Game } from './game/Game';
 import type { BootProgress } from './core/boot';
 
-// Initialize WaveDash Three.js integration (if available)
-declare global {
-  interface Window {
-    Wavedash?: {
-      init: (options: { appId: string; version: string }) => Promise<void>;
-    };
-  }
-}
-
-if (window.Wavedash) {
-  void window.Wavedash.init({
-    appId: 'joe-must-drive',
-    version: '0.1.0'
-  }).catch((error: unknown) => {
-    console.warn('[WaveDash] Initialization failed:', error);
-    // Continue even if WaveDash fails - game should still work locally
-  });
+// Import Wavedash SDK (will be available in WaveDash environment)
+// In local dev, this will be undefined but won't break anything
+let Wavedash: any = null;
+try {
+  // @ts-ignore - Dynamic import for Wavedash SDK
+  Wavedash = await import('@wvdsh/sdk-js');
+} catch {
+  console.log('WaveDash not available in local development');
 }
 
 const root = document.querySelector<HTMLDivElement>('#app');
@@ -48,6 +39,23 @@ const boot = async (): Promise<void> => {
     game = new Game(root);
     await game.prepare(updateLoading);
     game.start();
+    
+    // Initialize Wavedash once the game is fully loaded and ready to play
+    if (Wavedash && Wavedash.default) {
+      const wavedashSDK = Wavedash.default;
+      console.log('[Wavedash] Initializing...', wavedashSDK);
+      
+      try {
+        await wavedashSDK.init({ debug: true });
+        console.log('[Wavedash] Initialization complete');
+      } catch (error) {
+        console.warn('[Wavedash] Init failed (expected in local dev):', error);
+        // Don't fail the game initialization - just warn
+      }
+    } else {
+      console.log('[Wavedash] Not available - running locally without platform features');
+    }
+    
     if (loader) {
       loader.dataset.hidden = 'true';
       window.setTimeout(() => loader.remove(), 240);
