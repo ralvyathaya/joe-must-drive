@@ -483,7 +483,7 @@ export class Game {
   
   // Call this when game is fully loaded and ready
   markAsReadyForWaveDash(): void {
-    const wavedash = (window as any).Wavadash;
+    const wavedash = (window as any).Wavedash;
     if (wavedash && typeof wavedash.init === 'function') {
       try {
         void wavedash.init({ debug: true }).catch((err: unknown) => {
@@ -492,6 +492,8 @@ export class Game {
       } catch (error) {
         console.error('[WaveDash] Failed to initialize:', error);
       }
+    } else {
+      console.log('[Game] Not in WaveDash environment, no init needed');
     }
   }
 

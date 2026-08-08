@@ -45,8 +45,18 @@ const boot = async (): Promise<void> => {
     game.markAsReadyForWaveDash();
     
     if (loader) {
-      loader.dataset.hidden = 'true';
-      window.setTimeout(() => loader.remove(), 240);
+      // For WaveDash environment, completely remove loader immediately
+      // to prevent any z-index issues from blocking interaction
+      const wavedash = (window as any).Wavedash;
+      
+      if (wavedash && typeof wavedash.init === 'function') {
+        console.log('[Main] In Wavedash environment - removing loader');
+        loader.remove();
+      } else {
+        console.log('[Main] Local dev mode');
+        loader.style.display = 'none';
+        window.setTimeout(() => loader.remove(), 10);
+      }
     }
   } catch (error) {
     console.error('[boot] Preflight failed.', error);
