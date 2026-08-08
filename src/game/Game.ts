@@ -159,6 +159,7 @@ export class Game {
   private weaponBoostTimer = 0;
   private jumpTimer = 0;
   private preparePromise: Promise<void> | null = null;
+  private bossAppliedRifleUpgrade = false; // Track if AR upgrade has been applied for this run
   private armsAnchorDebugTransform: DebugTransformSnapshot = {
     position: [0, 0, 0],
     rotationDegrees: [0, 0, 0],
@@ -710,6 +711,13 @@ export class Game {
         this.playerSystem.state.strafeX,
         this.jumpTimer > 0,
       );
+      
+      // Auto-equip Assault Rifle when boss enters fighting phase (Gunner only!)
+      if (bossImpact.damage > 0 && !this.bossAppliedRifleUpgrade) {
+        this.applyBossAssaultRifleUpgrade();
+        this.bossAppliedRifleUpgrade = true;
+      }
+      
       if (bossImpact.damage > 0) {
         this.rewardSystem.breakChainFromDamage();
         this.lastDeathCause = 'bossProjectile';
@@ -1610,6 +1618,10 @@ export class Game {
     this.pickupSystem.reset();
     this.bossSystem.reset();
     this.portalSystem.reset({ incomingPortalRef: options.incomingPortalRef ?? null });
+    
+    // Reset boss-specific state
+    this.bossAppliedRifleUpgrade = false;
+    
     this.roadHandlingPenalty = 0;
     this.roadAimShake = 0;
     this.roadCameraShake = 0;
@@ -2238,5 +2250,17 @@ export class Game {
     } catch (error) {
       console.warn('[Leaderboard] Upload failed:', error);
     }
+  }
+  
+  // Auto-equip Assault Rifle when boss starts fighting phase (Gunner only!)
+  private applyBossAssaultRifleUpgrade(): void {
+    // Only upgrade gunner, not driver
+    if (this.coopSession.activeProfile === 'driver') {
+      return;
+    }
+    
+    // Use public method from WeaponSystem
+    this.weaponSystem.triggerBossAssaultRifleUpgrade(this.playerSystem);
+    console.log('[Boss] Assault Rifle auto-equipped for gunner!');
   }
 }

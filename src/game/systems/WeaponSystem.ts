@@ -472,6 +472,14 @@ export class WeaponSystem {
     }
     this.equipBazooka(player);
   }
+  
+  // Public method for boss AR upgrade
+  public triggerBossAssaultRifleUpgrade(player: PlayerSystem): void {
+    const currentWeapon = this.getActiveWeaponKind();
+    if (currentWeapon !== 'assaultRifle') {
+      this.equipAssaultRifle(player);
+    }
+  }
 
   private equipBazooka(player: PlayerSystem): void {
     this.activeWeapon = 'bazooka';
