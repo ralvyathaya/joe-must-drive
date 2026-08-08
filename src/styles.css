@@ -1553,6 +1553,24 @@ body {
   text-align: center;
 }
 
+/* Mobile-specific: shift dialog to left side instead of center */
+@media (max-width: 720px) {
+  .overlay-dialog {
+    left: 16px;
+    right: auto;
+    transform: none;
+    width: calc(100vw - 32px);
+    margin-top: 0;
+    top: auto;
+    bottom: 16px;
+  }
+  
+  .overlay-state {
+    grid-template-columns: fit-content(280px) minmax(180px, 1fr) fit-content(240px);
+    gap: clamp(12px, 2.5vw, 28px);
+  }
+}
+
 .overlay-state {
   top: var(--overlay-inset);
   bottom: var(--overlay-inset);

@@ -849,8 +849,8 @@ export const GAME_CONFIG: GameConfig = {
     wreckSpawnWeight: 0.8,
     obstacleHitboxDepth: 2.6,
     roadSurfaceY: -0.18,
-    roadCurveAmplitude: 0.65,
-    roadCurveFrequency: 0.016,
+    roadCurveAmplitude: 0.82, // Increased from 0.65 for more dynamic lanes
+    roadCurveFrequency: 0.018, // Slightly higher frequency
     roadsidePropDensity: 1,
     brokenLane: {
       width: 4.6,
@@ -926,6 +926,8 @@ export const GAME_CONFIG: GameConfig = {
       cameraKick: 0.022,
       audioPath: '/audio/world/jump-ramp.ogg',
       audioVolume: 0.32,
+      airTimeDamageMultiplier: 1.3, // Bonus damage dealt while in air from ramps
+      airTimeBonusScore: 15, // Score bonus for each zombie killed in air
     },
     audio: {
       obstacleImpactPath: '/audio/world/concrete-barrier-crack.ogg',

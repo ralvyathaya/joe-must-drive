@@ -924,6 +924,8 @@ export interface GameConfig {
       cameraKick: number;
       audioPath: string;
       audioVolume: number;
+      airTimeDamageMultiplier: number;
+      airTimeBonusScore: number;
     };
     audio: {
       obstacleImpactPath: string;

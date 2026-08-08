@@ -23,6 +23,18 @@ import type {
   WorldImpactResult,
 } from '../core/types';
 import { approach, clamp, randomInt, randomRange, setGameRandomSeed } from '../core/utils';
+
+const ADAPTIVE_STATS_KEY = 'sidecar-of-the-dead.adaptive-stats';
+const MAX_PLAY_TIME_FOR_ADAPTIVE = 300; // 5 minutes threshold
+
+type AdaptiveStats = {
+  totalRuns: number;
+  bestScore: number;
+  avgAccuracy: number;
+  deathsByCause: Record<string, number>;
+  totalTimeSeconds: number;
+  averageSurvivalTime: number;
+};
 import { UISystem } from '../ui/UISystem';
 import { LoopingSound } from './audio/LoopingSound';
 import { MusicDirector } from './audio/MusicDirector';
@@ -157,6 +169,7 @@ export class Game {
     gunnerKills: 0,
     latchSaves: 0,
   };
+  private adaptiveStats: AdaptiveStats | null = this.loadAdaptiveStats();
 
   constructor(root: HTMLElement) {
     this.shell.className = 'game-shell';
@@ -766,6 +779,12 @@ export class Game {
     }
 
     this.updateMusic(deltaTime);
+    
+    // Update adaptive difficulty based on performance
+    if (this.state === 'running' && this.adaptiveStats) {
+      this.updateAdaptiveDifficulty();
+    }
+    
     const ride = this.frameRideState ?? this.lastRideState;
     this.uiSystem.update({
       gameState: this.state,
@@ -1087,8 +1106,14 @@ export class Game {
     }
 
     this.rewardSystem.breakChainFromDamage();
+    
+    // Apply airtime damage bonus during jump
+    const baseDamage = zombie.config.contactDamage;
+    const airtimeMultiplier = this.jumpTimer > 0 ? GAME_CONFIG.world.ramp.airTimeDamageMultiplier : 1;
+    const actualDamage = Math.round(baseDamage * airtimeMultiplier);
+    
     this.lastDeathCause = zombie.type === 'tank' ? 'tank' : 'overrun';
-    this.playerSystem.applyDamage(zombie.config.contactDamage, zombie.group.position.x);
+    this.playerSystem.applyDamage(actualDamage, zombie.group.position.x);
     this.enemySystem.despawn(zombie);
   }
 
@@ -1306,6 +1331,11 @@ export class Game {
     this.setState('dead');
     this.networkSnapshotTimer = 0;
     this.sendNetworkSnapshot(0);
+    
+    // Record run results for adaptive difficulty
+    const elapsedSeconds = this.spawnSystem.elapsedSeconds;
+    this.recordRunResults(this.rewardSystem.getState().lastRunScore, elapsedSeconds);
+    
     if (this.inputSystem.isPointerLocked()) {
       this.suppressUnlockPause = true;
       void document.exitPointerLock();
@@ -1968,6 +1998,67 @@ export class Game {
       window.localStorage.setItem(PORTAL_PREFERENCE_KEY, String(this.portalEnabled));
     } catch {
       // Ignore storage failures and keep the current session preference.
+    }
+  }
+
+  private loadAdaptiveStats(): AdaptiveStats | null {
+    try {
+      const stored = localStorage.getItem(ADAPTIVE_STATS_KEY);
+      if (!stored) return null;
+      return JSON.parse(stored) as AdaptiveStats;
+    } catch {
+      return null;
+    }
+  }
+
+  private saveAdaptiveStats(stats: AdaptiveStats): void {
+    try {
+      localStorage.setItem(ADAPTIVE_STATS_KEY, JSON.stringify(stats));
+    } catch {
+      // Ignore storage failures
+    }
+  }
+
+  private updateAdaptiveDifficulty(): void {
+    if (!this.adaptiveStats || this.state !== 'running') return;
+
+    const totalPlaytime = this.adaptiveStats.totalTimeSeconds;
+    if (totalPlaytime < MAX_PLAY_TIME_FOR_ADAPTIVE) {
+      return;
+    }
+
+    // Calculate difficulty modifier based on performance
+    const survivalMultiplier = Math.min(1.25, 1 + (this.adaptiveStats.averageSurvivalTime - 18) / 90);
+    const scoreMultiplier = Math.min(1.3, 1 + (this.adaptiveStats.bestScore - 500) / 2000);
+    
+    // Reduce spawn pressure for weaker players
+    const adaptiveMultiplier = Math.max(0.7, Math.min(1.2, survivalMultiplier * scoreMultiplier * 0.9));
+    this.spawnSystem.setSpawnPressureMultiplier(adaptiveMultiplier);
+  }
+
+  private recordRunResults(score: number, elapsedSeconds: number): void {
+    if (!this.adaptiveStats) {
+      this.adaptiveStats = {
+        totalRuns: 1,
+        bestScore: score,
+        avgAccuracy: 0,
+        deathsByCause: {},
+        totalTimeSeconds: elapsedSeconds,
+        averageSurvivalTime: elapsedSeconds,
+      };
+    } else {
+      this.adaptiveStats.totalRuns += 1;
+      this.adaptiveStats.bestScore = Math.max(this.adaptiveStats.bestScore, score);
+      this.adaptiveStats.totalTimeSeconds += elapsedSeconds;
+      this.adaptiveStats.averageSurvivalTime = 
+        this.adaptiveStats.totalTimeSeconds / this.adaptiveStats.totalRuns;
+      
+      // Track death cause
+      const deathCauses = { ...this.adaptiveStats.deathsByCause };
+      deathCauses[this.lastDeathCause] = (deathCauses[this.lastDeathCause] || 0) + 1;
+      this.adaptiveStats = { ...this.adaptiveStats, deathsByCause: deathCauses };
+      
+      this.saveAdaptiveStats(this.adaptiveStats);
     }
   }
 
