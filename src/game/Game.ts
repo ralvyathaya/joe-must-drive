@@ -168,8 +168,15 @@ export class Game {
     gunnerShotsFired: 0,
     gunnerKills: 0,
     latchSaves: 0,
+    comboActivations: 0,
   };
   private adaptiveStats: AdaptiveStats | null = this.loadAdaptiveStats();
+  
+  // Co-op synergy system
+  private lastLocalFireAt = 0;
+  private lastRemoteFireAt = 0;
+  private comboActivationTimer = 0;
+  private comboScoreMultiplier = 1;
 
   constructor(root: HTMLElement) {
     this.shell.className = 'game-shell';
@@ -354,6 +361,12 @@ export class Game {
     };
     this.networkSystem.onRemoteInput = (frame) => {
       this.inputSystem.applyRemoteInputFrame(frame);
+      
+      // Track fire times for combo detection
+      if (frame.isFiring && frame.firePulse > 0) {
+        this.lastRemoteFireAt = performance.now();
+      }
+      
       this.vehicleRigSystem.triggerRemoteFire(frame.role, frame.currentWeapon, frame.firePulse);
     };
     this.networkSystem.onRemoteSnapshot = (snapshot) => {
@@ -370,7 +383,7 @@ export class Game {
       if (snapshot.zombies) {
         this.enemySystem.applyZombieSnapshots(snapshot.zombies);
       }
-      this.coopStats = { ...snapshot.stats };
+      this.coopStats = { ...snapshot.stats, comboActivations: 0 };
       this.frameRideState = snapshot.ride;
       this.lastRideState = snapshot.ride;
       this.latchWasActive = snapshot.ride.latchActive;
@@ -592,10 +605,12 @@ export class Game {
         preWorldRide.segment,
         this.worldSystem,
       );
-      this.playerSystem.state.score += this.rewardSystem.update(
-        simulationDelta,
+      const baseScore = this.rewardSystem.update(
+        deltaTime,
         this.spawnSystem.elapsedSeconds,
       );
+      // Apply combo multiplier on top
+      this.playerSystem.state.score += baseScore * this.comboScoreMultiplier;
       const playerPosition = this.playerSystem.getPosition(this.playerPosition);
 
         this.enemySystem.update(
@@ -783,6 +798,11 @@ export class Game {
     // Update adaptive difficulty based on performance
     if (this.state === 'running' && this.adaptiveStats) {
       this.updateAdaptiveDifficulty();
+    }
+    
+    // Update co-op synergies
+    if (this.state === 'running') {
+      this.updateCoopSynergies(deltaTime);
     }
     
     const ride = this.frameRideState ?? this.lastRideState;
@@ -1057,7 +1077,10 @@ export class Game {
       ride,
       spawn: this.spawnSystem.getSnapshot(),
       pickup: this.pickupSystem.getSnapshot(),
-      stats: { ...this.coopStats },
+      stats: { 
+        ...this.coopStats, 
+        comboActivations: this.coopStats.comboActivations 
+      },
       presentation: this.weaponSystem.getPresentationState(this.coopSession.role),
       boss: this.bossSystem.getSnapshot(),
       zombies: this.enemySystem.getZombieSnapshots(),
@@ -1076,6 +1099,7 @@ export class Game {
       gunnerShotsFired: 0,
       gunnerKills: 0,
       latchSaves: 0,
+      comboActivations: 0,
     };
   }
 
@@ -2034,6 +2058,29 @@ export class Game {
     // Reduce spawn pressure for weaker players
     const adaptiveMultiplier = Math.max(0.7, Math.min(1.2, survivalMultiplier * scoreMultiplier * 0.9));
     this.spawnSystem.setSpawnPressureMultiplier(adaptiveMultiplier);
+  }
+
+  private updateCoopSynergies(deltaTime: number): void {
+    const now = performance.now();
+    
+    // Check for simultaneous fire (combo)
+    if (this.coopSession.role !== 'solo' && this.coopSession.peerConnected) {
+      const timeDiff = now - this.lastLocalFireAt;
+      const remoteDiff = now - this.lastRemoteFireAt;
+      
+      // If both fired within 150ms of each other
+      if ((timeDiff < 150 && remoteDiff > 0 && remoteDiff < 150) ||
+          (remoteDiff < 150 && timeDiff > 0 && timeDiff < 150)) {
+        this.comboActivationTimer = Math.max(this.comboActivationTimer, deltaTime * 6); // 6 seconds
+        this.comboScoreMultiplier = 1.4; // 40% bonus
+        this.coopStats.comboActivations += 1;
+      } else {
+        this.comboActivationTimer = Math.max(0, this.comboActivationTimer - deltaTime);
+        if (this.comboActivationTimer <= 0) {
+          this.comboScoreMultiplier = 1;
+        }
+      }
+    }
   }
 
   private recordRunResults(score: number, elapsedSeconds: number): void {

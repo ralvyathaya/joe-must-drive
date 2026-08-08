@@ -78,6 +78,7 @@ export class RendererSystem {
   private speedEffectTime = 0;
   private speedEffectSpeed = 0;
   private speedEffectIntensity = 0;
+  private updateFrameCount = 0; // For throttling material updates
   private readonly rainCameraPosition = new Vector3();
   private readonly worldRainLayers: WorldRainLayer[] = [];
   private lightningLight: DirectionalLight | null = null;
@@ -235,10 +236,20 @@ export class RendererSystem {
         running &&
         ride?.activeEvent === 'slipperyRoad',
     );
+    
+    // Calculate rain intensity upfront for later use
     const rainIntensity = active ? Math.max(0, this.config.rain.intensity) : 0;
-
+    
+    // Throttle material updates to prevent lag/glitching
+    this.updateFrameCount += 1;
+    
     for (const layer of this.worldRainLayers) {
       layer.lines.visible = active;
+      
+      // Only update materials on even frames to reduce GPU load and prevent frame stutter
+      if (active && this.updateFrameCount % 2 === 0) {
+        layer.material.opacity = layer.baseOpacity * Math.min(1.35, rainIntensity);
+      }
     }
 
     if (!active) {

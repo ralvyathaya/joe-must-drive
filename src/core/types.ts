@@ -1124,6 +1124,7 @@ export interface CoopRunStats {
   gunnerShotsFired: number;
   gunnerKills: number;
   latchSaves: number;
+  comboActivations: number; // New: Track combo activations
 }
 
 export interface SpawnSnapshot {
