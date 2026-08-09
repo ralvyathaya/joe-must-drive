@@ -241,6 +241,7 @@ export class UISystem {
   private readonly driverPortraitFrame = document.createElement('div');
   private readonly driverPortrait = document.createElement('img');
   private readonly driverPrompt = document.createElement('div');
+  private driverChat: HTMLDivElement | null = null;
   private readonly driverPromptSpeaker = document.createElement('div');
   private readonly driverPromptLabel = document.createElement('div');
   private readonly driverPromptTimer = document.createElement('div');
@@ -541,6 +542,13 @@ export class UISystem {
     );
     this.driverPortraitFrame.append(this.driverPortrait);
     this.driverPanel.append(this.driverPortraitFrame, this.driverPrompt);
+    
+    // Add driver chat message element
+    const driverChat = document.createElement('div');
+    driverChat.className = 'driver-chat-message';
+    driverChat.hidden = true;
+    this.driverPanel.insertAdjacentElement('beforeend', driverChat);
+    this.driverChat = driverChat;
 
     this.latchWarning.className = 'latch-warning';
     this.latchLabel.className = 'latch-label';
@@ -1226,6 +1234,20 @@ export class UISystem {
   setDeathCause(cause: DeathCausePresentation): void {
     this.overlayStateCauseTitle.textContent = cause.title;
     this.overlayStateCauseBody.textContent = cause.body;
+  }
+  
+  setDriverChat(message: string, show: boolean): void {
+    if (this.driverChat) {
+      this.driverChat.textContent = message;
+      this.driverChat.hidden = !show;
+      
+      // Auto-hide after 3 seconds
+      if (show) {
+        setTimeout(() => {
+          this.driverChat!.hidden = true;
+        }, 3000);
+      }
+    }
   }
 
   update(snapshot: HUDSnapshot): void {

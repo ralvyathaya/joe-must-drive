@@ -968,20 +968,31 @@ export class BossSystem {
   }
 
   private deactivateProjectile(projectile: BossProjectileRecord): void {
+    // Clean up all visual elements to prevent glitching
     projectile.active = false;
     projectile.hitPlayer = false;
     projectile.impactSoundPlayed = false;
     projectile.telegraphTimer = 0;
     projectile.impactTimer = 0;
-    projectile.mesh.visible = false;
-    projectile.beamMesh.visible = false;
-    projectile.blastMesh.visible = false;
-    projectile.material.opacity = 0;
-    projectile.beamMaterial.opacity = 0;
-    projectile.blastMaterial.opacity = 0;
-    projectile.mesh.position.set(0, this.config.world.roadSurfaceY + 0.09, 999);
-    projectile.beamMesh.position.set(0, 999, 0);
-    projectile.blastMesh.position.set(0, 999, 0);
+    
+    // Completely hide and disable rendering
+    if (projectile.mesh) {
+      projectile.mesh.visible = false;
+      projectile.material.opacity = 0;
+      projectile.mesh.position.set(0, 999, 0); // Hide off-screen
+    }
+    
+    if (projectile.beamMesh) {
+      projectile.beamMesh.visible = false;
+      projectile.beamMaterial.opacity = 0;
+      projectile.beamMesh.position.set(0, 999, 0);
+    }
+    
+    if (projectile.blastMesh) {
+      projectile.blastMesh.visible = false;
+      projectile.blastMaterial.opacity = 0;
+      projectile.blastMesh.position.set(0, 999, 0);
+    }
   }
 
   private startRetreat(defeated: boolean): void {

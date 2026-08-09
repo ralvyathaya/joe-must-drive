@@ -712,8 +712,8 @@ export class Game {
         this.jumpTimer > 0,
       );
       
-      // Auto-equip Assault Rifle when boss enters fighting phase (Gunner only!)
-      if (bossImpact.damage > 0 && !this.bossAppliedRifleUpgrade) {
+      // Auto-equip Assault Rifle as soon as boss enters fighting phase
+      if (!this.bossAppliedRifleUpgrade && this.bossSystem.isCombatActive()) {
         this.applyBossAssaultRifleUpgrade();
         this.bossAppliedRifleUpgrade = true;
       }
@@ -1177,6 +1177,18 @@ export class Game {
     
     this.lastDeathCause = zombie.type === 'tank' ? 'tank' : 'overrun';
     this.playerSystem.applyDamage(actualDamage, zombie.group.position.x);
+    
+    // Driver voice line on death during boss fight
+    if (this.bossSystem.isActive()) {
+      const bossVoiceLines = [
+        "Brother! Watch out!",
+        "Don't let them get you!",
+        "Hold on tight!",
+        "We can make it!",
+      ];
+      const randomLine = bossVoiceLines[Math.floor(Math.random() * bossVoiceLines.length)];
+      this.uiSystem.setDriverChat(randomLine, true);
+    }
     this.enemySystem.despawn(zombie);
   }
 
