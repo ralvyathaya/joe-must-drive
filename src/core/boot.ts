@@ -25,5 +25,5 @@ export async function runBootTasks(
     await task.run();
   }
 
-  onProgress?.({ stage: 'Ready', completed: tasks.length, total: tasks.length, percent: 100 });
+  onProgress?.({ stage: 'Ready\nBuilt by Ralvy Athaya', completed: tasks.length, total: tasks.length, percent: 100 });
 }
